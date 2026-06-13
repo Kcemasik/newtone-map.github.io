@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FloorMap — Карта этажей</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d1117;
+  --sidebar:   #161b22;
+  --border:    rgba(255,255,255,0.08);
+  --hover:     rgba(255,255,255,0.05);
+  --active-bg: rgba(59,130,246,0.12);
+  --active-bd: rgba(59,130,246,0.4);
+  --accent:    #3b82f6;
+  --t1:        #e6edf3;
+  --t2:        #8b949e;
+  --t3:        #484f58;
+  --success:   #22c55e;
+  --danger:    #ef4444;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── HEADER ──────────────────────────── */
+header {
+  height: 48px;
+  background: var(--sidebar);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.logo {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+}
+
+.hdiv { width: 1px; height: 18px; background: var(--border); }
+
+.building-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--t1);
+  max-width: 240px;
+  cursor: text;
+  user-select: text;
+}
+.building-input::placeholder { color: var(--t3); }
+
+.header-meta {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--t3);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
+
+.header-hint {
+  font-size: 11px;
+  color: var(--t3);
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+/* ── LAYOUT ──────────────────────────── */
+main { flex: 1; display: flex; overflow: hidden; }
+
+/* ── SIDEBAR ─────────────────────────── */
+aside {
+  width: 216px;
+  flex-shrink: 0;
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-label {
+  padding: 14px 16px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--t3);
+}
+
+.floors-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.floors-list::-webkit-scrollbar { width: 3px; }
+.floors-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Floor row */
+.frow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.1s;
+  position: relative;
+}
+.frow:hover { background: var(--hover); }
+.frow.active { background: var(--active-bg); border-color: var(--active-bd); }
+
+.fnum {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.04);
+  color: var(--t2);
+  font-variant-numeric: tabular-nums;
+}
+.frow.active .fnum { background: var(--accent); color: #fff; }
+
+.finfo { flex: 1; min-width: 0; }
+
+.fname-display {
+  font-size: 13px; font-weight: 500;
+  color: var(--t1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.fstatus {
+  font-size: 10px;
+  color: var(--t3);
+  margin-top: 2px;
+}
+.fstatus.ok { color: var(--success); }
+
+.fthumb {
+  width: 34px; height: 26px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+}
+.fthumb img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Inline rename input */
+.fname-input {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  outline: none;
+  font-size: 12px; font-weight: 500;
+  color: var(--t1);
+  padding: 2px 5px;
+  font-family: inherit;
+  user-select: text;
+}
+
+.sidebar-footer {
+  padding: 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 5px;
+}
+
+.sbtn {
+  flex: 1;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--t2);
+  font-size: 12px; font-family: inherit;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  transition: all 0.12s;
+}
+.sbtn:hover { background: var(--hover); color: var(--t1); border-color: rgba(255,255,255,0.15); }
+.sbtn-del:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171; }
+.sbtn-narrow { flex: none; width: 34px; padding: 0; }
+
+/* ── MAP AREA ─────────────────────────── */
+.map-wrap {
+  flex: 1;
+  position: relative;
+  background: #eef2f7;
+  overflow: hidden;
+  cursor: grab;
+}
+.map-wrap.grabbing { cursor: grabbing; }
+
+/* Blueprint grid */
+.grid-bg {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(148,163,184,0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148,163,184,0.5) 1px, transparent 1px),
+    linear-gradient(rgba(148,163,184,0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148,163,184,0.2) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+}
+
+/* Transformable canvas */
+.canvas {
+  position: absolute; top: 0; left: 0;
+  transform-origin: 0 0;
+  transition: opacity 0.15s ease;
+}
+.canvas img {
+  display: block;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Upload zone */
+.upload-zone {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.upload-card {
+  background: #fff;
+  border: 2px dashed #cbd5e1;
+  border-radius: 18px;
+  padding: 52px 72px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.18s;
+  max-width: 400px;
+}
+.upload-card:hover, .upload-card.dragover {
+  border-color: var(--accent);
+  background: #f0f7ff;
+}
+.upload-icon {
+  font-size: 40px;
+  margin-bottom: 14px;
+  display: block;
+  filter: grayscale(0.3) opacity(0.7);
+}
+.upload-title {
+  font-size: 16px; font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 6px;
+}
+.upload-sub {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+/* Floor badge */
+.floor-badge {
+  position: absolute;
+  top: 16px; left: 16px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 7px 14px;
+  display: flex; align-items: center; gap: 8px;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+.badge-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.badge-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+.badge-name { font-size: 13px; font-weight: 700; color: #0f172a; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Replace button */
+.replace-btn {
+  position: absolute;
+  top: 16px; right: 16px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12px; font-weight: 600;
+  color: #475569; cursor: pointer;
+  transition: all 0.14s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  display: none;
+}
+.replace-btn:hover { border-color: var(--accent); color: var(--accent); background: #f0f7ff; }
+
+/* Zoom controls */
+.zoom-controls {
+  position: absolute;
+  bottom: 20px; right: 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.zbtn {
+  width: 36px; height: 36px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 20px; line-height: 1;
+  cursor: pointer;
+  color: #475569;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+.zbtn:hover { border-color: var(--accent); color: var(--accent); }
+.zpct { font-size: 10px; color: #94a3b8; font-variant-numeric: tabular-nums; padding: 1px 0; }
+
+/* Fit button */
+.fit-btn {
+  position: absolute;
+  bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px; font-weight: 600;
+  color: #475569; cursor: pointer;
+  transition: all 0.14s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  display: none;
+}
+.fit-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Context menu */
+.ctx-menu {
+  position: fixed;
+  background: var(--sidebar);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 5px;
+  min-width: 160px;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  display: none;
+}
+.ctx-item {
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--t2);
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex; align-items: center; gap: 8px;
+  transition: background 0.1s;
+}
+.ctx-item:hover { background: var(--hover); color: var(--t1); }
+.ctx-item.danger:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+.ctx-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* Tooltip */
+[title] { cursor: default; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">FLOORMAP</span>
+  <div class="hdiv"></div>
+  <input class="building-input" id="buildingName" type="text" placeholder="Название здания..." value="Мой объект">
+  <div class="hdiv"></div>
+  <span class="header-hint">ПКМ по этажу — меню</span>
+  <div class="header-meta" id="headerMeta">x: 0 &nbsp; y: 0 &nbsp;|&nbsp; 100%</div>
+</header>
+
+<main>
+  <aside>
+    <div class="sidebar-label">Этажи</div>
+    <div class="floors-list" id="floorsList"></div>
+    <div class="sidebar-footer">
+      <button class="sbtn" onclick="addFloor()" title="Добавить этаж">＋ Добавить</button>
+      <button class="sbtn sbtn-narrow sbtn-del" onclick="deleteFloor(activeId)" title="Удалить активный этаж">✕</button>
+    </div>
+  </aside>
+
+  <div class="map-wrap" id="mapWrap">
+    <div class="grid-bg" id="gridBg"></div>
+
+    <div class="canvas" id="canvas">
+      <img id="mapImg" src="" alt="Карта этажа">
+    </div>
+
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-card" id="uploadCard" onclick="openPicker()">
+        <span class="upload-icon">🗺️</span>
+        <div class="upload-title">Загрузить карту этажа</div>
+        <div class="upload-sub">Нажмите или перетащите изображение<br>PNG, JPG, SVG, WebP</div>
+      </div>
+    </div>
+
+    <div class="floor-badge" id="floorBadge">
+      <div class="badge-dot"></div>
+      <span class="badge-lbl">Этаж</span>
+      <span class="badge-name" id="badgeName">—</span>
+    </div>
+
+    <button class="replace-btn" id="replaceBtn" onclick="openPicker()">↑ Заменить карту</button>
+    <button class="fit-btn" id="fitBtn" onclick="fitToScreen()">⊡ По размеру</button>
+
+    <div class="zoom-controls">
+      <button class="zbtn" onclick="doZoom(1.25)" title="Увеличить (=)">+</button>
+      <div class="zpct" id="zpct">100%</div>
+      <button class="zbtn" onclick="doZoom(0.8)" title="Уменьшить (-)">−</button>
+      <button class="zbtn" onclick="resetView()" title="Сбросить вид (0)" style="font-size:14px">⊡</button>
+    </div>
+  </div>
+</main>
+
+<!-- Context menu -->
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-item" id="ctxRename">✏️ &nbsp;Переименовать</div>
+  <div class="ctx-item" id="ctxUpload">⬆️ &nbsp;Загрузить карту</div>
+  <div class="ctx-item" id="ctxFit">⊡ &nbsp;По размеру экрана</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item danger" id="ctxDelete">✕ &nbsp;Удалить этаж</div>
+</div>
+
+<input type="file" id="filePicker" accept="image/*" style="display:none">
+
+<script>
+// ── State ──────────────────────────────────────────────────
+let floors = [
+  { id:1, name:'1-й этаж',  img: null },
+  { id:2, name:'2-й этаж',  img: null },
+  { id:3, name:'Мансарда',   img: null },
+];
+let activeId = 1;
+let uid = 4;
+
+// Transform state
+let tx=0, ty=0, scale=1;
+let dragging=false, dx0=0, dy0=0, tx0=0, ty0=0;
+
+// Context menu target
+let ctxTargetId = null;
+
+// ── DOM ────────────────────────────────────────────────────
+const mapWrap    = document.getElementById('mapWrap');
+const canvas     = document.getElementById('canvas');
+const mapImg     = document.getElementById('mapImg');
+const uploadZone = document.getElementById('uploadZone');
+const uploadCard = document.getElementById('uploadCard');
+const floorsList = document.getElementById('floorsList');
+const badgeName  = document.getElementById('badgeName');
+const replaceBtn = document.getElementById('replaceBtn');
+const fitBtn     = document.getElementById('fitBtn');
+const gridBg     = document.getElementById('gridBg');
+const zpct       = document.getElementById('zpct');
+const headerMeta = document.getElementById('headerMeta');
+const filePicker = document.getElementById('filePicker');
+const ctxMenu    = document.getElementById('ctxMenu');
+
+// ── Render ─────────────────────────────────────────────────
+function render() {
+  floorsList.innerHTML = '';
+
+  // Draw from top floor to bottom (reverse order)
+  for (let i = floors.length - 1; i >= 0; i--) {
+    const f = floors[i];
+    const isActive = f.id === activeId;
+    const floorNum = i + 1;
+
+    const row = document.createElement('div');
+    row.className = 'frow' + (isActive ? ' active' : '');
+    row.dataset.id = f.id;
+
+    row.innerHTML = `
+      <div class="fnum">${floorNum}</div>
+      <div class="finfo">
+        <div class="fname-display" data-fid="${f.id}">${esc(f.name)}</div>
+        <div class="fstatus ${f.img ? 'ok' : ''}">${f.img ? '● карта загружена' : '○ нет карты'}</div>
+      </div>
+      <div class="fthumb">${f.img ? `<img src="${f.img}" alt="">` : ''}</div>
+    `;
+
+    row.addEventListener('click', () => switchFloor(f.id));
+    row.addEventListener('dblclick', (e) => {
+      if (e.target.classList.contains('fname-display')) startRename(f.id, e.target);
+    });
+    row.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      showCtxMenu(e.clientX, e.clientY, f.id);
+    });
+
+    floorsList.appendChild(row);
+  }
+
+  updateMapDisplay(false);
+}
+
+function updateMapDisplay(animate) {
+  const f = getFloor(activeId);
+  badgeName.textContent = f ? f.name : '—';
+
+  const show = () => {
+    if (f && f.img) {
+      mapImg.src = f.img;
+      mapImg.style.display = 'block';
+      uploadZone.style.display = 'none';
+      replaceBtn.style.display = 'block';
+      fitBtn.style.display = 'block';
+    } else {
+      mapImg.style.display = 'none';
+      uploadZone.style.display = 'flex';
+      replaceBtn.style.display = 'none';
+      fitBtn.style.display = 'none';
+    }
+  };
+
+  if (animate) {
+    canvas.style.opacity = '0';
+    uploadZone.style.opacity = '0';
+    setTimeout(() => {
+      show();
+      canvas.style.opacity = '1';
+      uploadZone.style.opacity = '1';
+    }, 150);
+  } else {
+    show();
+  }
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function getFloor(id) { return floors.find(f => f.id === id); }
+
+// ── Floor operations ────────────────────────────────────────
+function switchFloor(id) {
+  if (id === activeId) return;
+  activeId = id;
+  render();
+  updateMapDisplay(true);
+}
+
+function addFloor() {
+  const n = floors.length + 1;
+  const newFloor = { id: uid++, name: `${n}-й этаж`, img: null };
+  floors.push(newFloor);
+  switchFloor(newFloor.id);
+  render();
+}
+
+function deleteFloor(id) {
+  if (floors.length <= 1) { showToast('Нельзя удалить последний этаж'); return; }
+  const idx = floors.findIndex(f => f.id === id);
+  floors.splice(idx, 1);
+  if (activeId === id) activeId = floors[Math.max(0, idx - 1)].id;
+  render();
+}
+
+// ── Inline rename ───────────────────────────────────────────
+function startRename(id, displayEl) {
+  const f = getFloor(id);
+  if (!f) return;
+  const input = document.createElement('input');
+  input.className = 'fname-input';
+  input.value = f.name;
+  input.maxLength = 40;
+  displayEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const commit = () => {
+    const newName = input.value.trim() || f.name;
+    f.name = newName;
+    render();
+    if (activeId === id) badgeName.textContent = newName;
+  };
+
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = f.name; input.blur(); }
+    e.stopPropagation();
+  });
+  input.addEventListener('click', e => e.stopPropagation());
+}
+
+// ── Context menu ────────────────────────────────────────────
+function showCtxMenu(x, y, id) {
+  ctxTargetId = id;
+  ctxMenu.style.display = 'block';
+  const mw = ctxMenu.offsetWidth, mh = ctxMenu.offsetHeight;
+  ctxMenu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
+  ctxMenu.style.top  = Math.min(y, window.innerHeight - mh - 8) + 'px';
+  switchFloor(id);
+}
+
+function hideCtxMenu() { ctxMenu.style.display = 'none'; ctxTargetId = null; }
+
+document.getElementById('ctxRename').onclick = () => {
+  const el = document.querySelector(`.fname-display[data-fid="${ctxTargetId}"]`);
+  if (el) startRename(ctxTargetId, el);
+  hideCtxMenu();
+};
+document.getElementById('ctxUpload').onclick = () => { openPicker(); hideCtxMenu(); };
+document.getElementById('ctxFit').onclick = () => { fitToScreen(); hideCtxMenu(); };
+document.getElementById('ctxDelete').onclick = () => { deleteFloor(ctxTargetId); hideCtxMenu(); };
+document.addEventListener('click', hideCtxMenu);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideCtxMenu(); });
+
+// ── File upload ─────────────────────────────────────────────
+function openPicker() { filePicker.value = ''; filePicker.click(); }
+
+filePicker.onchange = e => {
+  const file = e.target.files[0];
+  if (file) loadImageFile(file);
+};
+
+function loadImageFile(file) {
+  if (!file.type.startsWith('image/')) { showToast('Пожалуйста, выберите изображение'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const f = getFloor(activeId);
+    if (f) {
+      f.img = ev.target.result;
+      render();
+      fitToScreen();
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// Drag & drop on upload card
+['dragover','dragleave','drop'].forEach(type => {
+  uploadCard.addEventListener(type, e => {
+    e.preventDefault(); e.stopPropagation();
+    uploadCard.classList.toggle('dragover', type === 'dragover');
+    if (type === 'drop' && e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
+  });
+});
+
+// Drag & drop anywhere on map
+mapWrap.addEventListener('dragover', e => e.preventDefault());
+mapWrap.addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
+});
+
+// ── Transform / Pan / Zoom ──────────────────────────────────
+function applyTransform() {
+  canvas.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+
+  const gs = 20 * scale, g5 = 100 * scale;
+  const bp = `${tx}px ${ty}px`;
+  gridBg.style.backgroundSize = `${g5}px ${g5}px, ${g5}px ${g5}px, ${gs}px ${gs}px, ${gs}px ${gs}px`;
+  gridBg.style.backgroundPosition = `${bp}, ${bp}, ${bp}, ${bp}`;
+
+  const pct = Math.round(scale * 100);
+  zpct.textContent = pct + '%';
+
+  const rect = mapWrap.getBoundingClientRect();
+  const cx = Math.round((rect.width/2 - tx) / scale);
+  const cy = Math.round((rect.height/2 - ty) / scale);
+  headerMeta.textContent = `x: ${cx} \u2002 y: ${cy} \u2002|\u2002 ${pct}%`;
+}
+
+function doZoom(factor, mx, my) {
+  const rect = mapWrap.getBoundingClientRect();
+  if (mx === undefined) mx = rect.width / 2;
+  if (my === undefined) my = rect.height / 2;
+  const ns = Math.min(Math.max(scale * factor, 0.05), 20);
+  const r = ns / scale;
+  tx = mx - r * (mx - tx);
+  ty = my - r * (my - ty);
+  scale = ns;
+  applyTransform();
+}
+
+function resetView() { tx=0; ty=0; scale=1; applyTransform(); }
+
+function fitToScreen() {
+  if (!mapImg.naturalWidth) return;
+  const rect = mapWrap.getBoundingClientRect();
+  const margin = 40;
+  const sw = rect.width - margin*2, sh = rect.height - margin*2;
+  const iw = mapImg.naturalWidth, ih = mapImg.naturalHeight;
+  const s = Math.min(sw/iw, sh/ih, 1);
+  scale = s;
+  tx = (rect.width  - iw * s) / 2;
+  ty = (rect.height - ih * s) / 2;
+  applyTransform();
+}
+
+// Mouse pan
+mapWrap.addEventListener('mousedown', e => {
+  if (uploadZone.contains(e.target) || ctxMenu.contains(e.target)) return;
+  if (e.button !== 0) return;
+  dragging = true;
+  dx0 = e.clientX; dy0 = e.clientY; tx0 = tx; ty0 = ty;
+  mapWrap.classList.add('grabbing');
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  tx = tx0 + (e.clientX - dx0);
+  ty = ty0 + (e.clientY - dy0);
+  applyTransform();
+});
+
+document.addEventListener('mouseup', () => {
+  dragging = false;
+  mapWrap.classList.remove('grabbing');
+});
+
+// Wheel zoom
+mapWrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = mapWrap.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const factor = e.deltaY < 0 ? 1.1 : (1/1.1);
+  doZoom(factor, mx, my);
+}, { passive: false });
+
+// Touch support
+let touches = [], lastPinchDist = 0;
+
+mapWrap.addEventListener('touchstart', e => {
+  touches = Array.from(e.touches);
+  if (touches.length === 1) {
+    dx0 = touches[0].clientX; dy0 = touches[0].clientY;
+    tx0 = tx; ty0 = ty;
+  } else if (touches.length === 2) {
+    lastPinchDist = pinchDist(touches);
+  }
+  e.preventDefault();
+}, { passive: false });
+
+mapWrap.addEventListener('touchmove', e => {
+  const t = Array.from(e.touches);
+  if (t.length === 1) {
+    tx = tx0 + (t[0].clientX - dx0);
+    ty = ty0 + (t[0].clientY - dy0);
+  } else if (t.length === 2) {
+    const d = pinchDist(t);
+    const m = pinchMid(t);
+    const rect = mapWrap.getBoundingClientRect();
+    const mx = m.x - rect.left, my = m.y - rect.top;
+    const ns = Math.min(Math.max(scale * (d / lastPinchDist), 0.05), 20);
+    const r = ns / scale;
+    tx = mx - r * (mx - tx);
+    ty = my - r * (my - ty);
+    scale = ns;
+    lastPinchDist = d;
+  }
+  applyTransform();
+  e.preventDefault();
+}, { passive: false });
+
+mapWrap.addEventListener('touchend', e => { touches = Array.from(e.touches); });
+
+function pinchDist(t) {
+  return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+}
+function pinchMid(t) {
+  return { x: (t[0].clientX + t[1].clientX)/2, y: (t[0].clientY + t[1].clientY)/2 };
+}
+
+// ── Keyboard shortcuts ──────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === '=' || e.key === '+') doZoom(1.25);
+  if (e.key === '-') doZoom(0.8);
+  if (e.key === '0') resetView();
+  if (e.key === 'f' || e.key === 'а') fitToScreen();  // f = fit (ru: а)
+
+  // Arrow keys to pan
+  if (e.key === 'ArrowLeft')  { tx += 40; applyTransform(); }
+  if (e.key === 'ArrowRight') { tx -= 40; applyTransform(); }
+  if (e.key === 'ArrowUp')    { ty += 40; applyTransform(); }
+  if (e.key === 'ArrowDown')  { ty -= 40; applyTransform(); }
+
+  // Floor switching with PageUp / PageDown
+  if (e.key === 'PageUp') {
+    const idx = floors.findIndex(f => f.id === activeId);
+    if (idx < floors.length - 1) switchFloor(floors[idx + 1].id);
+  }
+  if (e.key === 'PageDown') {
+    const idx = floors.findIndex(f => f.id === activeId);
+    if (idx > 0) switchFloor(floors[idx - 1].id);
+  }
+});
+
+// ── Toast notification ──────────────────────────────────────
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  Object.assign(t.style, {
+    position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+    background: '#1e293b', color: '#e2e8f0',
+    padding: '10px 20px', borderRadius: '8px',
+    fontSize: '13px', fontWeight: '500',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+    zIndex: '9999', pointerEvents: 'none',
+    transition: 'opacity 0.3s',
+  });
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
+}
+
+// ── mapImg fit on load ──────────────────────────────────────
+mapImg.addEventListener('load', () => {
+  // Only auto-fit when first loading (not on floor switch re-render)
+  if (scale === 1 && tx === 0 && ty === 0) fitToScreen();
+});
+
+// ── Init ────────────────────────────────────────────────────
+render();
+applyTransform();
+</script>
+</body>
+</html>
