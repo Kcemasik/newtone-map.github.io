@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>FloorMap — Карта этажей</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,18 +20,21 @@
   --t3:        #484f58;
   --success:   #22c55e;
   --danger:    #ef4444;
+  --warn:      #f59e0b;
+  --user-dot:  #ef4444;
 }
 
-body {
+html, body {
+  height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   background: var(--bg);
   color: var(--t1);
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
+
+body { display: flex; flex-direction: column; height: 100dvh; }
 
 /* ── HEADER ──────────────────────────── */
 header {
@@ -40,9 +43,10 @@ header {
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  gap: 12px;
+  padding: 0 12px;
+  gap: 10px;
   flex-shrink: 0;
+  z-index: 10;
 }
 
 .logo {
@@ -50,9 +54,10 @@ header {
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--accent);
+  flex-shrink: 0;
 }
 
-.hdiv { width: 1px; height: 18px; background: var(--border); }
+.hdiv { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; }
 
 .building-input {
   background: transparent;
@@ -61,43 +66,84 @@ header {
   font-size: 14px;
   font-weight: 500;
   color: var(--t1);
-  max-width: 240px;
+  min-width: 0;
+  flex: 1;
   cursor: text;
   user-select: text;
 }
 .building-input::placeholder { color: var(--t3); }
 
-.header-meta {
+.header-right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.header-meta {
   font-size: 11px;
   color: var(--t3);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.03em;
+  display: none;
 }
 
-.header-hint {
-  font-size: 11px;
-  color: var(--t3);
-  padding: 3px 8px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
+@media (min-width: 640px) {
+  .header-meta { display: block; }
 }
+
+.icon-btn {
+  width: 32px; height: 32px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--t2);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+.icon-btn:hover { background: var(--hover); color: var(--t1); border-color: rgba(255,255,255,0.15); }
+.icon-btn.active { background: rgba(59,130,246,0.15); border-color: var(--accent); color: var(--accent); }
 
 /* ── LAYOUT ──────────────────────────── */
-main { flex: 1; display: flex; overflow: hidden; }
+main { flex: 1; display: flex; overflow: hidden; position: relative; min-height: 0; }
 
 /* ── SIDEBAR ─────────────────────────── */
 aside {
-  width: 216px;
+  width: 200px;
   flex-shrink: 0;
   background: var(--sidebar);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  transition: transform 0.25s ease, width 0.25s ease;
+  z-index: 20;
+}
+
+@media (max-width: 639px) {
+  aside {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 220px;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+  }
+  aside.open { transform: translateX(0); }
+  .sidebar-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 19;
+    display: none;
+  }
+  .sidebar-overlay.show { display: block; }
 }
 
 .sidebar-label {
-  padding: 14px 16px 6px;
+  padding: 12px 16px 6px;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -116,12 +162,11 @@ aside {
 .floors-list::-webkit-scrollbar { width: 3px; }
 .floors-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-/* Floor row */
 .frow {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
+  gap: 8px;
+  padding: 8px 8px;
   border-radius: 8px;
   border: 1px solid transparent;
   cursor: pointer;
@@ -131,8 +176,21 @@ aside {
 .frow:hover { background: var(--hover); }
 .frow.active { background: var(--active-bg); border-color: var(--active-bd); }
 
+/* User is on this floor indicator */
+.frow.user-here::after {
+  content: '';
+  position: absolute;
+  right: 8px; top: 50%; transform: translateY(-50%);
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--user-dot);
+  box-shadow: 0 0 6px var(--user-dot);
+  animation: blink 1.5s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
 .fnum {
-  width: 26px; height: 26px;
+  width: 24px; height: 24px;
   border-radius: 6px;
   font-size: 11px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
@@ -144,32 +202,22 @@ aside {
 .frow.active .fnum { background: var(--accent); color: #fff; }
 
 .finfo { flex: 1; min-width: 0; }
-
 .fname-display {
-  font-size: 13px; font-weight: 500;
+  font-size: 12px; font-weight: 500;
   color: var(--t1);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  line-height: 1.3;
 }
-
-.fstatus {
-  font-size: 10px;
-  color: var(--t3);
-  margin-top: 2px;
-}
+.fstatus { font-size: 10px; color: var(--t3); margin-top: 1px; }
 .fstatus.ok { color: var(--success); }
 
 .fthumb {
-  width: 34px; height: 26px;
-  border-radius: 4px;
-  overflow: hidden;
-  flex-shrink: 0;
+  width: 30px; height: 22px;
+  border-radius: 4px; overflow: hidden; flex-shrink: 0;
   background: rgba(255,255,255,0.03);
   border: 1px solid var(--border);
 }
 .fthumb img { width: 100%; height: 100%; object-fit: cover; }
 
-/* Inline rename input */
 .fname-input {
   width: 100%;
   background: rgba(255,255,255,0.06);
@@ -192,19 +240,19 @@ aside {
 
 .sbtn {
   flex: 1;
-  padding: 7px 8px;
+  padding: 7px 6px;
   border: 1px solid var(--border);
   border-radius: 7px;
   background: transparent;
   color: var(--t2);
-  font-size: 12px; font-family: inherit;
+  font-size: 11px; font-family: inherit;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 4px;
   transition: all 0.12s;
 }
 .sbtn:hover { background: var(--hover); color: var(--t1); border-color: rgba(255,255,255,0.15); }
 .sbtn-del:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171; }
-.sbtn-narrow { flex: none; width: 34px; padding: 0; }
+.sbtn-narrow { flex: none; width: 32px; padding: 0; }
 
 /* ── MAP AREA ─────────────────────────── */
 .map-wrap {
@@ -213,10 +261,10 @@ aside {
   background: #eef2f7;
   overflow: hidden;
   cursor: grab;
+  min-width: 0;
 }
 .map-wrap.grabbing { cursor: grabbing; }
 
-/* Blueprint grid */
 .grid-bg {
   position: absolute; inset: 0;
   pointer-events: none;
@@ -228,7 +276,6 @@ aside {
   background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
 }
 
-/* Transformable canvas */
 .canvas {
   position: absolute; top: 0; left: 0;
   transform-origin: 0 0;
@@ -241,91 +288,182 @@ aside {
   user-select: none;
 }
 
+/* User dot on map */
+#userDot {
+  position: absolute;
+  width: 18px; height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: var(--user-dot);
+  border: 2.5px solid #fff;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.3), 0 2px 8px rgba(0,0,0,0.4);
+  z-index: 100;
+  pointer-events: none;
+  display: none;
+  animation: pulseDot 2s ease-in-out infinite;
+}
+#userDot::after {
+  content: 'Вы';
+  position: absolute;
+  top: -20px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px; font-weight: 700;
+  color: #fff;
+  background: var(--user-dot);
+  padding: 2px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+@keyframes pulseDot {
+  0%,100% { box-shadow: 0 0 0 3px rgba(239,68,68,0.3), 0 2px 8px rgba(0,0,0,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(239,68,68,0.1), 0 2px 8px rgba(0,0,0,0.4); }
+}
+
+/* Broadcast images overlay */
+#broadcastOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(4px);
+}
+#broadcastOverlay.show { display: flex; }
+#broadcastImg {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  object-fit: contain;
+}
+.broadcast-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 36px; height: 36px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.broadcast-info {
+  position: absolute;
+  bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 /* Upload zone */
 .upload-zone {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
 }
+.upload-zone.active { pointer-events: all; }
 .upload-card {
   background: #fff;
   border: 2px dashed #cbd5e1;
-  border-radius: 18px;
-  padding: 52px 72px;
+  border-radius: 16px;
+  padding: 36px 48px;
   text-align: center;
   cursor: pointer;
   transition: all 0.18s;
-  max-width: 400px;
+  max-width: 340px;
+  width: 90%;
 }
 .upload-card:hover, .upload-card.dragover {
   border-color: var(--accent);
   background: #f0f7ff;
 }
-.upload-icon {
-  font-size: 40px;
-  margin-bottom: 14px;
-  display: block;
-  filter: grayscale(0.3) opacity(0.7);
-}
-.upload-title {
-  font-size: 16px; font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 6px;
-}
-.upload-sub {
-  font-size: 13px;
-  color: #64748b;
-  line-height: 1.6;
-}
+.upload-icon { font-size: 36px; margin-bottom: 12px; display: block; }
+.upload-title { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 5px; }
+.upload-sub { font-size: 12px; color: #64748b; line-height: 1.6; }
 
 /* Floor badge */
 .floor-badge {
   position: absolute;
-  top: 16px; left: 16px;
-  background: #fff;
+  top: 12px; left: 12px;
+  background: rgba(255,255,255,0.95);
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 7px 14px;
-  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  display: flex; align-items: center; gap: 7px;
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  z-index: 5;
 }
-.badge-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex-shrink: 0;
-}
-.badge-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
-.badge-name { font-size: 13px; font-weight: 700; color: #0f172a; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.badge-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+.badge-name { font-size: 12px; font-weight: 700; color: #0f172a; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Replace button */
-.replace-btn {
+/* GPS status badge */
+.gps-badge {
   position: absolute;
-  top: 16px; right: 16px;
-  background: #fff;
+  top: 12px; right: 12px;
+  background: rgba(255,255,255,0.95);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px 12px;
+  display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  z-index: 5;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.gps-badge:hover { background: #f0f7ff; border-color: var(--accent); }
+.gps-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.gps-dot.active { background: var(--success); box-shadow: 0 0 6px var(--success); animation: blink 1.5s ease-in-out infinite; }
+.gps-dot.error  { background: var(--danger); }
+.gps-dot.searching { background: var(--warn); animation: blink 0.8s ease-in-out infinite; }
+.gps-label { color: #475569; }
+
+/* Replace/Fit buttons */
+.replace-btn, .fit-btn {
+  position: absolute;
+  background: rgba(255,255,255,0.95);
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 7px 14px;
-  font-size: 12px; font-weight: 600;
+  padding: 6px 12px;
+  font-size: 11px; font-weight: 600;
   color: #475569; cursor: pointer;
   transition: all 0.14s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
   display: none;
+  z-index: 5;
 }
-.replace-btn:hover { border-color: var(--accent); color: var(--accent); background: #f0f7ff; }
+.replace-btn { bottom: 60px; right: 12px; }
+.fit-btn { bottom: 12px; left: 50%; transform: translateX(-50%); }
+.replace-btn:hover, .fit-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* Zoom controls */
 .zoom-controls {
   position: absolute;
-  bottom: 20px; right: 20px;
+  bottom: 12px; right: 12px;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
+  z-index: 5;
 }
 .zbtn {
-  width: 36px; height: 36px;
-  background: #fff;
+  width: 34px; height: 34px;
+  background: rgba(255,255,255,0.95);
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 20px; line-height: 1;
+  font-size: 18px; line-height: 1;
   cursor: pointer;
   color: #475569;
   display: flex; align-items: center; justify-content: center;
@@ -333,24 +471,7 @@ aside {
   box-shadow: 0 1px 4px rgba(0,0,0,0.07);
 }
 .zbtn:hover { border-color: var(--accent); color: var(--accent); }
-.zpct { font-size: 10px; color: #94a3b8; font-variant-numeric: tabular-nums; padding: 1px 0; }
-
-/* Fit button */
-.fit-btn {
-  position: absolute;
-  bottom: 20px; left: 50%;
-  transform: translateX(-50%);
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 12px; font-weight: 600;
-  color: #475569; cursor: pointer;
-  transition: all 0.14s;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-  display: none;
-}
-.fit-btn:hover { border-color: var(--accent); color: var(--accent); }
+.zpct { font-size: 10px; color: #94a3b8; font-variant-numeric: tabular-nums; }
 
 /* Context menu */
 .ctx-menu {
@@ -377,36 +498,348 @@ aside {
 .ctx-item.danger:hover { background: rgba(239,68,68,0.1); color: #f87171; }
 .ctx-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
-/* Tooltip */
-[title] { cursor: default; }
+/* ── ADMIN PANEL ─────────────────────── */
+.admin-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 5000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.admin-overlay.show { display: flex; }
+
+.admin-panel {
+  background: var(--sidebar);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+}
+.admin-panel::-webkit-scrollbar { width: 4px; }
+.admin-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.admin-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.admin-title {
+  font-size: 15px; font-weight: 700;
+  color: var(--t1);
+  flex: 1;
+}
+.admin-close {
+  width: 28px; height: 28px;
+  background: rgba(255,255,255,0.06);
+  border: none;
+  border-radius: 6px;
+  color: var(--t2);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.admin-close:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+
+.admin-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 18px; }
+
+.admin-section {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.admin-section-title {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--t3);
+  margin-bottom: 10px;
+}
+
+.form-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.form-row:last-child { margin-bottom: 0; }
+.form-label { font-size: 12px; font-weight: 500; color: var(--t2); }
+.form-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--t1);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  user-select: text;
+}
+.form-input:focus { border-color: var(--accent); }
+
+.form-hint { font-size: 11px; color: var(--t3); line-height: 1.5; }
+
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+
+.admin-btn {
+  width: 100%;
+  padding: 9px;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px; font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  margin-top: 4px;
+}
+.admin-btn:hover { opacity: 0.85; }
+.admin-btn.secondary {
+  background: rgba(255,255,255,0.06);
+  color: var(--t2);
+  border: 1px solid var(--border);
+}
+.admin-btn.danger {
+  background: rgba(239,68,68,0.12);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+.admin-btn.danger:hover { background: rgba(239,68,68,0.2); }
+
+/* Broadcast preview */
+.broadcast-preview-wrap {
+  display: none;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-top: 8px;
+  position: relative;
+}
+.broadcast-preview-wrap.show { display: block; }
+.broadcast-preview-img {
+  width: 100%; max-height: 160px;
+  object-fit: contain;
+  display: block;
+}
+.broadcast-preview-label {
+  position: absolute;
+  top: 6px; left: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+/* Floor geofence list in admin */
+.floor-geo-list { display: flex; flex-direction: column; gap: 8px; }
+.floor-geo-item {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.floor-geo-item-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 6px;
+}
+.floor-geo-num {
+  width: 22px; height: 22px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.floor-geo-name { font-size: 12px; font-weight: 600; color: var(--t1); flex: 1; }
+.floor-geo-toggle {
+  width: 36px; height: 20px;
+  background: var(--t3);
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+  border: none;
+}
+.floor-geo-toggle.on { background: var(--success); }
+.floor-geo-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+.floor-geo-toggle.on::after { transform: translateX(16px); }
+
+/* Login screen */
+.admin-login {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.admin-login-icon {
+  font-size: 40px;
+  margin-bottom: 4px;
+}
+.admin-login-title {
+  font-size: 16px; font-weight: 700;
+  color: var(--t1);
+}
+.admin-login-sub {
+  font-size: 12px; color: var(--t3);
+  text-align: center;
+}
+.admin-login-error {
+  font-size: 12px; color: var(--danger);
+  display: none;
+}
+
+/* Status chips */
+.status-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 11px; font-weight: 600;
+}
+.chip-ok { background: rgba(34,197,94,0.1); color: var(--success); }
+.chip-off { background: rgba(255,255,255,0.05); color: var(--t3); }
+.chip-live { background: rgba(59,130,246,0.1); color: var(--accent); }
+
+/* Toast */
+.toast-wrap {
+  position: fixed;
+  bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+/* Mobile: hamburger */
+.hamburger { display: none; }
+@media (max-width: 639px) {
+  .hamburger { display: flex; }
+  .header-hint { display: none; }
+}
+
+/* Broadcast notification banner */
+.broadcast-banner {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #fff;
+  padding: 10px 16px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  z-index: 150;
+  cursor: pointer;
+  font-size: 13px; font-weight: 600;
+}
+.broadcast-banner.show { display: flex; }
+.broadcast-banner-icon { font-size: 18px; flex-shrink: 0; }
+.broadcast-banner-text { flex: 1; }
+.broadcast-banner-btn {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11px; font-weight: 700;
+  padding: 4px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Admin panel geofence coords display */
+.coord-display {
+  font-size: 11px;
+  color: var(--accent);
+  font-family: 'Courier New', monospace;
+  background: rgba(59,130,246,0.08);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 6px;
+  word-break: break-all;
+}
+
+/* User position on map placed via canvas */
+#userMarker {
+  position: absolute;
+  width: 20px; height: 20px;
+  margin-left: -10px;
+  margin-top: -20px;
+  pointer-events: none;
+  z-index: 50;
+  display: none;
+}
+#userMarker svg { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
+
 </style>
 </head>
 <body>
 
+<!-- Broadcast overlay for all users -->
+<div id="broadcastOverlay">
+  <button class="broadcast-close" onclick="closeBroadcast()">✕</button>
+  <img id="broadcastImg" src="" alt="Трансляция">
+  <div class="broadcast-info" id="broadcastInfo">📡 Трансляция от администратора</div>
+</div>
+
 <header>
+  <!-- Mobile hamburger -->
+  <button class="icon-btn hamburger" id="hamburgerBtn" onclick="toggleSidebar()" title="Этажи">☰</button>
   <span class="logo">FLOORMAP</span>
   <div class="hdiv"></div>
   <input class="building-input" id="buildingName" type="text" placeholder="Название здания..." value="Мой объект">
-  <div class="hdiv"></div>
-  <span class="header-hint">ПКМ по этажу — меню</span>
-  <div class="header-meta" id="headerMeta">x: 0 &nbsp; y: 0 &nbsp;|&nbsp; 100%</div>
+  <div class="header-right">
+    <div class="header-meta" id="headerMeta">x: 0 &ensp; y: 0 &ensp;|&ensp; 100%</div>
+    <button class="icon-btn" id="adminBtn" onclick="openAdmin()" title="Панель администратора">⚙️</button>
+  </div>
 </header>
 
 <main>
-  <aside>
+  <!-- Mobile sidebar overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+  <aside id="sidebar">
     <div class="sidebar-label">Этажи</div>
     <div class="floors-list" id="floorsList"></div>
     <div class="sidebar-footer">
-      <button class="sbtn" onclick="addFloor()" title="Добавить этаж">＋ Добавить</button>
-      <button class="sbtn sbtn-narrow sbtn-del" onclick="deleteFloor(activeId)" title="Удалить активный этаж">✕</button>
+      <button class="sbtn" onclick="addFloor()" title="Добавить этаж">＋ Этаж</button>
+      <button class="sbtn sbtn-narrow sbtn-del" onclick="deleteFloor(activeId)" title="Удалить">✕</button>
     </div>
   </aside>
 
   <div class="map-wrap" id="mapWrap">
     <div class="grid-bg" id="gridBg"></div>
 
+    <!-- Broadcast banner -->
+    <div class="broadcast-banner" id="broadcastBanner" onclick="openBroadcast()">
+      <span class="broadcast-banner-icon">📡</span>
+      <span class="broadcast-banner-text">Новое сообщение от администратора</span>
+      <span class="broadcast-banner-btn">Открыть</span>
+    </div>
+
     <div class="canvas" id="canvas">
       <img id="mapImg" src="" alt="Карта этажа">
+      <!-- User position marker inside canvas transform -->
+      <div id="userDot"></div>
     </div>
 
     <div class="upload-zone" id="uploadZone">
@@ -423,14 +856,20 @@ aside {
       <span class="badge-name" id="badgeName">—</span>
     </div>
 
+    <!-- GPS status badge -->
+    <div class="gps-badge" id="gpsBadge" onclick="toggleGPS()" title="Нажмите для включения/выключения геолокации">
+      <div class="gps-dot" id="gpsDot"></div>
+      <span class="gps-label" id="gpsLabel">GPS выкл</span>
+    </div>
+
     <button class="replace-btn" id="replaceBtn" onclick="openPicker()">↑ Заменить карту</button>
     <button class="fit-btn" id="fitBtn" onclick="fitToScreen()">⊡ По размеру</button>
 
     <div class="zoom-controls">
-      <button class="zbtn" onclick="doZoom(1.25)" title="Увеличить (=)">+</button>
+      <button class="zbtn" onclick="doZoom(1.25)" title="Увеличить">+</button>
       <div class="zpct" id="zpct">100%</div>
-      <button class="zbtn" onclick="doZoom(0.8)" title="Уменьшить (-)">−</button>
-      <button class="zbtn" onclick="resetView()" title="Сбросить вид (0)" style="font-size:14px">⊡</button>
+      <button class="zbtn" onclick="doZoom(0.8)" title="Уменьшить">−</button>
+      <button class="zbtn" onclick="resetView()" title="Сбросить" style="font-size:13px">⊡</button>
     </div>
   </div>
 </main>
@@ -446,24 +885,168 @@ aside {
 
 <input type="file" id="filePicker" accept="image/*" style="display:none">
 
+<!-- Admin panel overlay -->
+<div class="admin-overlay" id="adminOverlay" onclick="handleAdminOverlayClick(event)">
+  <div class="admin-panel" id="adminPanel">
+
+    <!-- Login screen -->
+    <div id="adminLoginView">
+      <div class="admin-header">
+        <span class="admin-title">Панель администратора</span>
+        <button class="admin-close" onclick="closeAdmin()">✕</button>
+      </div>
+      <div class="admin-login">
+        <div class="admin-login-icon">🔐</div>
+        <div class="admin-login-title">Вход в панель управления</div>
+        <div class="admin-login-sub">Введите пароль администратора<br>для доступа к настройкам</div>
+        <input type="password" class="form-input" id="adminPasswordInput"
+          placeholder="Пароль..." style="text-align:center; font-size:16px; letter-spacing:0.2em; width:100%"
+          onkeydown="if(event.key==='Enter') tryAdminLogin()">
+        <div class="admin-login-error" id="adminLoginError">❌ Неверный пароль</div>
+        <button class="admin-btn" onclick="tryAdminLogin()">Войти</button>
+      </div>
+    </div>
+
+    <!-- Main admin view (hidden until login) -->
+    <div id="adminMainView" style="display:none">
+      <div class="admin-header">
+        <span style="font-size:16px;">⚙️</span>
+        <span class="admin-title">Панель администратора</span>
+        <button class="admin-close" onclick="closeAdmin()">✕</button>
+      </div>
+      <div class="admin-body">
+
+        <!-- Section: Password -->
+        <div class="admin-section">
+          <div class="admin-section-title">🔑 Смена пароля</div>
+          <div class="form-row">
+            <label class="form-label">Новый пароль</label>
+            <input type="password" class="form-input" id="newPasswordInput" placeholder="Новый пароль...">
+          </div>
+          <button class="admin-btn secondary" onclick="changeAdminPassword()">Сменить пароль</button>
+        </div>
+
+        <!-- Section: Broadcast -->
+        <div class="admin-section">
+          <div class="admin-section-title">📡 Трансляция изображения</div>
+          <p class="form-hint">Загрузите картинку — она появится у всех посетителей сайта поверх карты.</p>
+          <div class="form-row" style="margin-top:10px;">
+            <label class="form-label">Изображение для трансляции</label>
+            <input type="file" id="broadcastPicker" accept="image/*" style="display:none" onchange="handleBroadcastFile(event)">
+            <button class="admin-btn secondary" onclick="document.getElementById('broadcastPicker').click()">
+              📤 Выбрать изображение
+            </button>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Подпись (необязательно)</label>
+            <input type="text" class="form-input" id="broadcastCaption" placeholder="Важное объявление...">
+          </div>
+          <div class="broadcast-preview-wrap" id="broadcastPreviewWrap">
+            <img class="broadcast-preview-img" id="broadcastPreviewImg" src="" alt="">
+            <span class="broadcast-preview-label">Предпросмотр</span>
+          </div>
+          <button class="admin-btn" onclick="sendBroadcast()" style="margin-top:10px;">📡 Отправить всем</button>
+          <button class="admin-btn danger" onclick="clearBroadcast()" style="margin-top:6px;">✕ Убрать трансляцию</button>
+          <div id="broadcastStatus" style="margin-top:8px; font-size:11px; color:var(--t3);"></div>
+        </div>
+
+        <!-- Section: Geofence — Building location -->
+        <div class="admin-section">
+          <div class="admin-section-title">📍 Геозона здания</div>
+          <p class="form-hint">Карта начнёт работу только когда пользователь находится в зоне здания. Укажите координаты центра и радиус зоны.</p>
+          <div class="form-row-2" style="margin-top:10px;">
+            <div class="form-row">
+              <label class="form-label">Широта (lat)</label>
+              <input type="number" class="form-input" id="geoLat" placeholder="41.2995" step="0.0001">
+            </div>
+            <div class="form-row">
+              <label class="form-label">Долгота (lon)</label>
+              <input type="number" class="form-input" id="geoLon" placeholder="69.2401" step="0.0001">
+            </div>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Радиус зоны (метры)</label>
+            <input type="number" class="form-input" id="geoRadius" placeholder="50" min="5" max="500">
+          </div>
+          <button class="admin-btn secondary" onclick="captureCurrentGPS()">📍 Использовать текущее местоположение</button>
+          <div class="coord-display" id="geoCurrentDisplay" style="display:none"></div>
+          <button class="admin-btn" onclick="saveGeofence()" style="margin-top:8px;">💾 Сохранить геозону</button>
+          <div id="geofenceStatus" style="margin-top:8px;font-size:11px;color:var(--t3);"></div>
+        </div>
+
+        <!-- Section: Floor geofence (auto floor detection) -->
+        <div class="admin-section">
+          <div class="admin-section-title">🏢 Автоопределение этажа (высота)</div>
+          <p class="form-hint">Укажите высоту каждого этажа в метрах над землёй. Браузер определит этаж по данным барометра (если поддерживается).</p>
+          <div class="floor-geo-list" id="floorGeoList"></div>
+          <button class="admin-btn secondary" onclick="renderFloorGeoList()" style="margin-top:8px;">🔄 Обновить список</button>
+          <button class="admin-btn" onclick="saveFloorHeights()" style="margin-top:6px;">💾 Сохранить высоты</button>
+          <div id="altStatus" style="margin-top:8px;font-size:11px;color:var(--t3);"></div>
+        </div>
+
+        <!-- Section: User position on map -->
+        <div class="admin-section">
+          <div class="admin-section-title">🎯 Позиция пользователя на карте</div>
+          <p class="form-hint">Задайте начальную позицию красной метки для каждого этажа (в пикселях изображения карты).</p>
+          <div id="userPosSection">
+            <p class="form-hint" style="color:var(--t3); margin-top:6px;">Выберите этаж на карте, затем нажмите кнопку — появится метка, которую можно перетаскивать.</p>
+            <button class="admin-btn secondary" onclick="enablePositionEdit()" style="margin-top:8px;">✏️ Редактировать позицию</button>
+            <button class="admin-btn secondary" onclick="disablePositionEdit()" style="margin-top:6px; display:none" id="stopEditPosBtn">✅ Готово</button>
+          </div>
+        </div>
+
+        <!-- Section: Admin log out -->
+        <div>
+          <button class="admin-btn danger" onclick="adminLogout()">Выйти из панели</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
 <script>
-// ── State ──────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
 let floors = [
-  { id:1, name:'1-й этаж',  img: null },
-  { id:2, name:'2-й этаж',  img: null },
-  { id:3, name:'Мансарда',   img: null },
+  { id:1, name:'1-й этаж', img: null, userPos: null, altMin: 0, altMax: 4, altEnabled: false },
+  { id:2, name:'2-й этаж', img: null, userPos: null, altMin: 4, altMax: 8, altEnabled: false },
+  { id:3, name:'Мансарда', img: null, userPos: null, altMin: 8, altMax: 15, altEnabled: false },
 ];
 let activeId = 1;
 let uid = 4;
 
-// Transform state
 let tx=0, ty=0, scale=1;
 let dragging=false, dx0=0, dy0=0, tx0=0, ty0=0;
-
-// Context menu target
 let ctxTargetId = null;
 
-// ── DOM ────────────────────────────────────────────────────
+// Admin
+const ADMIN_PW_KEY = 'fm_admin_pw';
+const DEFAULT_PW = 'admin123';
+let isAdminLoggedIn = false;
+
+// Geofence
+let geofence = { lat: null, lon: null, radius: 50, enabled: false };
+let gpsActive = false;
+let gpsWatchId = null;
+let insideGeofence = false;
+let userFloorId = null; // floor detected by altitude
+
+// Broadcast
+let currentBroadcastData = null; // {img, caption}
+
+// Position editing
+let posEditMode = false;
+let userDotDragging = false;
+let dotDx0=0, dotDy0=0, dotPx0=0, dotPy0=0;
+
+// ═══════════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════════
 const mapWrap    = document.getElementById('mapWrap');
 const canvas     = document.getElementById('canvas');
 const mapImg     = document.getElementById('mapImg');
@@ -478,97 +1061,490 @@ const zpct       = document.getElementById('zpct');
 const headerMeta = document.getElementById('headerMeta');
 const filePicker = document.getElementById('filePicker');
 const ctxMenu    = document.getElementById('ctxMenu');
+const userDot    = document.getElementById('userDot');
+const gpsBadge   = document.getElementById('gpsBadge');
+const gpsDot     = document.getElementById('gpsDot');
+const gpsLabel   = document.getElementById('gpsLabel');
+const sidebar    = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
 
-// ── Render ─────────────────────────────────────────────────
-function render() {
-  floorsList.innerHTML = '';
-
-  // Draw from top floor to bottom (reverse order)
-  for (let i = floors.length - 1; i >= 0; i--) {
-    const f = floors[i];
-    const isActive = f.id === activeId;
-    const floorNum = i + 1;
-
-    const row = document.createElement('div');
-    row.className = 'frow' + (isActive ? ' active' : '');
-    row.dataset.id = f.id;
-
-    row.innerHTML = `
-      <div class="fnum">${floorNum}</div>
-      <div class="finfo">
-        <div class="fname-display" data-fid="${f.id}">${esc(f.name)}</div>
-        <div class="fstatus ${f.img ? 'ok' : ''}">${f.img ? '● карта загружена' : '○ нет карты'}</div>
-      </div>
-      <div class="fthumb">${f.img ? `<img src="${f.img}" alt="">` : ''}</div>
-    `;
-
-    row.addEventListener('click', () => switchFloor(f.id));
-    row.addEventListener('dblclick', (e) => {
-      if (e.target.classList.contains('fname-display')) startRename(f.id, e.target);
-    });
-    row.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      showCtxMenu(e.clientX, e.clientY, f.id);
-    });
-
-    floorsList.appendChild(row);
-  }
-
-  updateMapDisplay(false);
+// ═══════════════════════════════════════════════════
+//  STORAGE HELPERS
+// ═══════════════════════════════════════════════════
+function saveToStorage() {
+  try {
+    const data = {
+      floors: floors.map(f => ({ ...f, img: f.img })),
+      geofence,
+      broadcastData: currentBroadcastData,
+      buildingName: document.getElementById('buildingName').value
+    };
+    localStorage.setItem('floormap_data', JSON.stringify(data));
+  } catch(e) {}
 }
 
-function updateMapDisplay(animate) {
-  const f = getFloor(activeId);
-  badgeName.textContent = f ? f.name : '—';
-
-  const show = () => {
-    if (f && f.img) {
-      mapImg.src = f.img;
-      mapImg.style.display = 'block';
-      uploadZone.style.display = 'none';
-      replaceBtn.style.display = 'block';
-      fitBtn.style.display = 'block';
-    } else {
-      mapImg.style.display = 'none';
-      uploadZone.style.display = 'flex';
-      replaceBtn.style.display = 'none';
-      fitBtn.style.display = 'none';
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem('floormap_data');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.floors && data.floors.length > 0) floors = data.floors;
+    if (data.geofence) geofence = data.geofence;
+    if (data.broadcastData) {
+      currentBroadcastData = data.broadcastData;
+      // Show broadcast banner to all (simulate shared data)
+      showBroadcastBanner();
     }
-  };
+    if (data.buildingName) document.getElementById('buildingName').value = data.buildingName;
+  } catch(e) {}
+}
 
-  if (animate) {
-    canvas.style.opacity = '0';
-    uploadZone.style.opacity = '0';
-    setTimeout(() => {
-      show();
-      canvas.style.opacity = '1';
-      uploadZone.style.opacity = '1';
-    }, 150);
+// ═══════════════════════════════════════════════════
+//  ADMIN
+// ═══════════════════════════════════════════════════
+function getAdminPw() {
+  return localStorage.getItem(ADMIN_PW_KEY) || DEFAULT_PW;
+}
+
+function openAdmin() {
+  document.getElementById('adminOverlay').classList.add('show');
+  if (isAdminLoggedIn) {
+    showAdminMain();
   } else {
-    show();
+    showAdminLogin();
+  }
+  document.getElementById('adminPasswordInput').focus && setTimeout(() => document.getElementById('adminPasswordInput').focus(), 100);
+}
+
+function closeAdmin() {
+  document.getElementById('adminOverlay').classList.remove('show');
+}
+
+function handleAdminOverlayClick(e) {
+  if (e.target === document.getElementById('adminOverlay')) closeAdmin();
+}
+
+function showAdminLogin() {
+  document.getElementById('adminLoginView').style.display = '';
+  document.getElementById('adminMainView').style.display = 'none';
+  document.getElementById('adminLoginError').style.display = 'none';
+  document.getElementById('adminPasswordInput').value = '';
+}
+
+function showAdminMain() {
+  document.getElementById('adminLoginView').style.display = 'none';
+  document.getElementById('adminMainView').style.display = '';
+  renderFloorGeoList();
+  loadGeofenceToAdmin();
+}
+
+function tryAdminLogin() {
+  const val = document.getElementById('adminPasswordInput').value;
+  if (val === getAdminPw()) {
+    isAdminLoggedIn = true;
+    document.getElementById('adminLoginError').style.display = 'none';
+    showAdminMain();
+  } else {
+    document.getElementById('adminLoginError').style.display = 'block';
+    document.getElementById('adminPasswordInput').value = '';
+    document.getElementById('adminPasswordInput').focus();
   }
 }
 
-function esc(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function changeAdminPassword() {
+  const val = document.getElementById('newPasswordInput').value.trim();
+  if (!val || val.length < 4) { showToast('Пароль должен быть не менее 4 символов'); return; }
+  localStorage.setItem(ADMIN_PW_KEY, val);
+  document.getElementById('newPasswordInput').value = '';
+  showToast('✅ Пароль успешно изменён');
 }
 
+function adminLogout() {
+  isAdminLoggedIn = false;
+  closeAdmin();
+  showToast('Вы вышли из панели администратора');
+}
+
+// ═══════════════════════════════════════════════════
+//  BROADCAST
+// ═══════════════════════════════════════════════════
+let pendingBroadcastFile = null;
+
+function handleBroadcastFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    pendingBroadcastFile = ev.target.result;
+    document.getElementById('broadcastPreviewImg').src = pendingBroadcastFile;
+    document.getElementById('broadcastPreviewWrap').classList.add('show');
+  };
+  reader.readAsDataURL(file);
+}
+
+function sendBroadcast() {
+  if (!pendingBroadcastFile) { showToast('Сначала выберите изображение'); return; }
+  const caption = document.getElementById('broadcastCaption').value.trim() || '📡 Сообщение от администратора';
+  currentBroadcastData = { img: pendingBroadcastFile, caption };
+  saveToStorage();
+  showBroadcastBanner();
+  document.getElementById('broadcastStatus').textContent = '✅ Изображение отправлено всем пользователям';
+  showToast('📡 Трансляция запущена');
+  // Simulate real-time: show to self
+  openBroadcast();
+}
+
+function clearBroadcast() {
+  currentBroadcastData = null;
+  pendingBroadcastFile = null;
+  document.getElementById('broadcastPreviewWrap').classList.remove('show');
+  document.getElementById('broadcastPreviewImg').src = '';
+  document.getElementById('broadcastStatus').textContent = 'Трансляция остановлена';
+  document.getElementById('broadcastBanner').classList.remove('show');
+  closeBroadcast();
+  saveToStorage();
+  showToast('Трансляция остановлена');
+}
+
+function showBroadcastBanner() {
+  if (!currentBroadcastData) return;
+  document.getElementById('broadcastBanner').classList.add('show');
+}
+
+function openBroadcast() {
+  if (!currentBroadcastData) return;
+  document.getElementById('broadcastImg').src = currentBroadcastData.img;
+  document.getElementById('broadcastInfo').textContent = currentBroadcastData.caption;
+  document.getElementById('broadcastOverlay').classList.add('show');
+  document.getElementById('broadcastBanner').classList.remove('show');
+}
+
+function closeBroadcast() {
+  document.getElementById('broadcastOverlay').classList.remove('show');
+  if (currentBroadcastData) {
+    document.getElementById('broadcastBanner').classList.add('show');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  GEOFENCE & GPS
+// ═══════════════════════════════════════════════════
+function saveGeofence() {
+  const lat = parseFloat(document.getElementById('geoLat').value);
+  const lon = parseFloat(document.getElementById('geoLon').value);
+  const radius = parseFloat(document.getElementById('geoRadius').value) || 50;
+  if (isNaN(lat) || isNaN(lon)) { showToast('Укажите корректные координаты'); return; }
+  geofence = { lat, lon, radius, enabled: true };
+  saveToStorage();
+  document.getElementById('geofenceStatus').textContent = `✅ Геозона сохранена: (${lat.toFixed(5)}, ${lon.toFixed(5)}), R=${radius}м`;
+  showToast('✅ Геозона сохранена');
+}
+
+function loadGeofenceToAdmin() {
+  if (geofence.lat !== null) {
+    document.getElementById('geoLat').value = geofence.lat;
+    document.getElementById('geoLon').value = geofence.lon;
+    document.getElementById('geoRadius').value = geofence.radius;
+  }
+}
+
+function captureCurrentGPS() {
+  if (!navigator.geolocation) { showToast('Геолокация не поддерживается'); return; }
+  showToast('Определяем местоположение...');
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    document.getElementById('geoLat').value = lat.toFixed(6);
+    document.getElementById('geoLon').value = lon.toFixed(6);
+    const disp = document.getElementById('geoCurrentDisplay');
+    disp.style.display = 'block';
+    disp.textContent = `📍 ${lat.toFixed(6)}, ${lon.toFixed(6)} — Точность: ±${Math.round(pos.coords.accuracy)}м`;
+    showToast(`✅ Координаты захвачены`);
+  }, err => {
+    showToast('Ошибка GPS: ' + err.message);
+  }, { enableHighAccuracy: true });
+}
+
+function distanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2-lat1)*Math.PI/180;
+  const dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function toggleGPS() {
+  if (gpsActive) {
+    stopGPS();
+  } else {
+    startGPS();
+  }
+}
+
+function startGPS() {
+  if (!navigator.geolocation) { showToast('Геолокация не поддерживается на этом устройстве'); return; }
+  gpsActive = true;
+  setGPSUI('searching', 'Поиск...');
+  gpsWatchId = navigator.geolocation.watchPosition(onGPSUpdate, onGPSError, {
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 2000
+  });
+}
+
+function stopGPS() {
+  if (gpsWatchId !== null) navigator.geolocation.clearWatch(gpsWatchId);
+  gpsWatchId = null;
+  gpsActive = false;
+  insideGeofence = false;
+  setGPSUI('off', 'GPS выкл');
+  userDot.style.display = 'none';
+  render(); // clear user-here marker
+}
+
+function setGPSUI(state, label) {
+  gpsDot.className = 'gps-dot' + (state !== 'off' ? ' ' + (state === 'active' ? 'active' : state === 'error' ? 'error' : 'searching') : '');
+  gpsLabel.textContent = label;
+}
+
+function onGPSUpdate(pos) {
+  setGPSUI('active', `±${Math.round(pos.coords.accuracy)}м`);
+
+  // Check geofence
+  if (geofence.enabled && geofence.lat !== null) {
+    const dist = distanceMeters(pos.coords.latitude, pos.coords.longitude, geofence.lat, geofence.lon);
+    const wasInside = insideGeofence;
+    insideGeofence = dist <= geofence.radius;
+    if (!wasInside && insideGeofence) showToast('📍 Вы вошли в зону здания');
+    if (wasInside && !insideGeofence) showToast('📍 Вы покинули зону здания');
+  } else {
+    insideGeofence = true; // No geofence set — always active
+  }
+
+  // Auto floor detection by altitude
+  if (pos.coords.altitude !== null && pos.coords.altitude !== undefined) {
+    const alt = pos.coords.altitude;
+    const detectedFloor = floors.find(f => f.altEnabled && alt >= f.altMin && alt < f.altMax);
+    if (detectedFloor && detectedFloor.id !== userFloorId) {
+      userFloorId = detectedFloor.id;
+      switchFloor(detectedFloor.id);
+      showToast(`🏢 Автоопределение: ${detectedFloor.name}`);
+    }
+  }
+
+  // Update user position on map if inside geofence
+  if (insideGeofence) {
+    showUserOnMap();
+  } else {
+    userDot.style.display = 'none';
+  }
+
+  render(); // update floor list indicators
+}
+
+function onGPSError(err) {
+  setGPSUI('error', 'Ошибка GPS');
+  if (err.code === 1) showToast('❌ Доступ к GPS запрещён. Разрешите геолокацию в браузере.');
+  else showToast('❌ Ошибка GPS: ' + err.message);
+}
+
+function showUserOnMap() {
+  const f = getFloor(activeId);
+  if (!f || !f.img) return;
+
+  // Use saved user position or default to center
+  const pos = f.userPos || { x: 0.5, y: 0.5 };
+
+  // Convert fractional pos to pixel pos in image
+  // We need image natural size
+  if (!mapImg.naturalWidth) return;
+  const px = pos.x * mapImg.naturalWidth;
+  const py = pos.y * mapImg.naturalHeight;
+
+  userDot.style.display = 'block';
+  userDot.style.left = px + 'px';
+  userDot.style.top  = py + 'px';
+}
+
+// ═══════════════════════════════════════════════════
+//  FLOOR ALTITUDE CONFIG
+// ═══════════════════════════════════════════════════
+function renderFloorGeoList() {
+  const list = document.getElementById('floorGeoList');
+  list.innerHTML = '';
+  floors.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'floor-geo-item';
+    item.innerHTML = `
+      <div class="floor-geo-item-header">
+        <div class="floor-geo-num">${i+1}</div>
+        <div class="floor-geo-name">${esc(f.name)}</div>
+        <button class="floor-geo-toggle ${f.altEnabled ? 'on' : ''}" 
+          onclick="toggleFloorAlt(${f.id})" data-fid="${f.id}"></button>
+      </div>
+      <div class="form-row-2">
+        <div class="form-row">
+          <label class="form-label" style="font-size:10px">Высота от (м)</label>
+          <input type="number" class="form-input" style="padding:5px 8px;font-size:11px"
+            id="altMin_${f.id}" value="${f.altMin || 0}" step="0.5">
+        </div>
+        <div class="form-row">
+          <label class="form-label" style="font-size:10px">Высота до (м)</label>
+          <input type="number" class="form-input" style="padding:5px 8px;font-size:11px"
+            id="altMax_${f.id}" value="${f.altMax || 4}" step="0.5">
+        </div>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+  checkAltimeterSupport();
+}
+
+function toggleFloorAlt(id) {
+  const f = getFloor(id);
+  if (!f) return;
+  f.altEnabled = !f.altEnabled;
+  renderFloorGeoList();
+}
+
+function saveFloorHeights() {
+  floors.forEach(f => {
+    const minEl = document.getElementById(`altMin_${f.id}`);
+    const maxEl = document.getElementById(`altMax_${f.id}`);
+    if (minEl) f.altMin = parseFloat(minEl.value) || 0;
+    if (maxEl) f.altMax = parseFloat(maxEl.value) || 4;
+  });
+  saveToStorage();
+  document.getElementById('altStatus').textContent = '✅ Высоты сохранены';
+  showToast('✅ Данные высот сохранены');
+}
+
+function checkAltimeterSupport() {
+  const statusEl = document.getElementById('altStatus');
+  // Check if DeviceMotionEvent or DeviceOrientationEvent with alpha is available
+  if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
+    statusEl.textContent = '⚠️ На iOS нужно разрешение. Барометр работает только в Safari.';
+  } else if (navigator.geolocation) {
+    statusEl.textContent = 'ℹ️ Высота определяется через GPS (точность зависит от устройства)';
+  } else {
+    statusEl.textContent = '❌ Геолокация не поддерживается';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  USER POSITION EDITING
+// ═══════════════════════════════════════════════════
+function enablePositionEdit() {
+  posEditMode = true;
+  document.getElementById('stopEditPosBtn').style.display = '';
+  showToast('Перетащите красную метку на карте для установки позиции');
+
+  // Ensure dot is visible
+  const f = getFloor(activeId);
+  if (f && f.img) {
+    if (!f.userPos) f.userPos = { x: 0.5, y: 0.5 };
+    showUserOnMap();
+    userDot.style.display = 'block';
+    userDot.style.cursor = 'grab';
+    userDot.style.pointerEvents = 'auto';
+  } else {
+    showToast('Сначала загрузите карту этажа');
+    posEditMode = false;
+  }
+}
+
+function disablePositionEdit() {
+  posEditMode = false;
+  document.getElementById('stopEditPosBtn').style.display = 'none';
+  userDot.style.cursor = '';
+  userDot.style.pointerEvents = 'none';
+  saveToStorage();
+  showToast('✅ Позиция сохранена');
+}
+
+// Drag userDot
+userDot.addEventListener('mousedown', e => {
+  if (!posEditMode) return;
+  e.stopPropagation();
+  userDotDragging = true;
+  dotDx0 = e.clientX;
+  dotDy0 = e.clientY;
+  const f = getFloor(activeId);
+  dotPx0 = (f && f.userPos) ? f.userPos.x : 0.5;
+  dotPy0 = (f && f.userPos) ? f.userPos.y : 0.5;
+  userDot.style.cursor = 'grabbing';
+});
+
+userDot.addEventListener('touchstart', e => {
+  if (!posEditMode) return;
+  e.stopPropagation();
+  const t = e.touches[0];
+  userDotDragging = true;
+  dotDx0 = t.clientX;
+  dotDy0 = t.clientY;
+  const f = getFloor(activeId);
+  dotPx0 = (f && f.userPos) ? f.userPos.x : 0.5;
+  dotPy0 = (f && f.userPos) ? f.userPos.y : 0.5;
+}, { passive: true });
+
+document.addEventListener('mousemove', e => {
+  if (!userDotDragging) return;
+  moveDot(e.clientX, e.clientY);
+});
+
+document.addEventListener('touchmove', e => {
+  if (!userDotDragging) return;
+  moveDot(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: true });
+
+document.addEventListener('mouseup', () => {
+  if (userDotDragging) { userDotDragging = false; userDot.style.cursor = 'grab'; }
+});
+document.addEventListener('touchend', () => { userDotDragging = false; });
+
+function moveDot(cx, cy) {
+  if (!mapImg.naturalWidth) return;
+  const f = getFloor(activeId);
+  if (!f) return;
+  // delta in screen pixels
+  const ddx = cx - dotDx0;
+  const ddy = cy - dotDy0;
+  // convert to image pixels
+  const dpx = ddx / scale;
+  const dpy = ddy / scale;
+  // new pos as fraction of image
+  const nx = dotPx0 + dpx / mapImg.naturalWidth;
+  const ny = dotPy0 + dpy / mapImg.naturalHeight;
+  f.userPos = {
+    x: Math.max(0, Math.min(1, nx)),
+    y: Math.max(0, Math.min(1, ny))
+  };
+  showUserOnMap();
+}
+
+// ═══════════════════════════════════════════════════
+//  FLOOR OPERATIONS
+// ═══════════════════════════════════════════════════
 function getFloor(id) { return floors.find(f => f.id === id); }
 
-// ── Floor operations ────────────────────────────────────────
 function switchFloor(id) {
   if (id === activeId) return;
   activeId = id;
   render();
   updateMapDisplay(true);
+  if (gpsActive && insideGeofence) setTimeout(showUserOnMap, 200);
 }
 
 function addFloor() {
   const n = floors.length + 1;
-  const newFloor = { id: uid++, name: `${n}-й этаж`, img: null };
+  const newFloor = {
+    id: uid++, name: `${n}-й этаж`, img: null,
+    userPos: null, altMin: (n-1)*3, altMax: n*3, altEnabled: false
+  };
   floors.push(newFloor);
   switchFloor(newFloor.id);
   render();
+  saveToStorage();
 }
 
 function deleteFloor(id) {
@@ -577,6 +1553,7 @@ function deleteFloor(id) {
   floors.splice(idx, 1);
   if (activeId === id) activeId = floors[Math.max(0, idx - 1)].id;
   render();
+  saveToStorage();
 }
 
 // ── Inline rename ───────────────────────────────────────────
@@ -588,16 +1565,13 @@ function startRename(id, displayEl) {
   input.value = f.name;
   input.maxLength = 40;
   displayEl.replaceWith(input);
-  input.focus();
-  input.select();
-
+  input.focus(); input.select();
   const commit = () => {
-    const newName = input.value.trim() || f.name;
-    f.name = newName;
+    f.name = input.value.trim() || f.name;
     render();
-    if (activeId === id) badgeName.textContent = newName;
+    if (activeId === id) badgeName.textContent = f.name;
+    saveToStorage();
   };
-
   input.addEventListener('blur', commit);
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
@@ -616,7 +1590,6 @@ function showCtxMenu(x, y, id) {
   ctxMenu.style.top  = Math.min(y, window.innerHeight - mh - 8) + 'px';
   switchFloor(id);
 }
-
 function hideCtxMenu() { ctxMenu.style.display = 'none'; ctxTargetId = null; }
 
 document.getElementById('ctxRename').onclick = () => {
@@ -647,12 +1620,12 @@ function loadImageFile(file) {
       f.img = ev.target.result;
       render();
       fitToScreen();
+      saveToStorage();
     }
   };
   reader.readAsDataURL(file);
 }
 
-// Drag & drop on upload card
 ['dragover','dragleave','drop'].forEach(type => {
   uploadCard.addEventListener(type, e => {
     e.preventDefault(); e.stopPropagation();
@@ -660,26 +1633,94 @@ function loadImageFile(file) {
     if (type === 'drop' && e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
   });
 });
-
-// Drag & drop anywhere on map
 mapWrap.addEventListener('dragover', e => e.preventDefault());
 mapWrap.addEventListener('drop', e => {
   e.preventDefault();
   if (e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
 });
 
+// ── RENDER ───────────────────────────────────────────────────
+function render() {
+  floorsList.innerHTML = '';
+  for (let i = floors.length - 1; i >= 0; i--) {
+    const f = floors[i];
+    const isActive = f.id === activeId;
+    const floorNum = i + 1;
+    const isUserHere = gpsActive && insideGeofence && f.id === (userFloorId || activeId);
+
+    const row = document.createElement('div');
+    row.className = 'frow' + (isActive ? ' active' : '') + (isUserHere ? ' user-here' : '');
+    row.dataset.id = f.id;
+
+    row.innerHTML = `
+      <div class="fnum">${floorNum}</div>
+      <div class="finfo">
+        <div class="fname-display" data-fid="${f.id}">${esc(f.name)}</div>
+        <div class="fstatus ${f.img ? 'ok' : ''}">${f.img ? '● карта загружена' : '○ нет карты'}</div>
+      </div>
+      <div class="fthumb">${f.img ? `<img src="${f.img}" alt="">` : ''}</div>
+    `;
+
+    row.addEventListener('click', () => { switchFloor(f.id); closeSidebar(); });
+    row.addEventListener('dblclick', e => {
+      if (e.target.classList.contains('fname-display')) startRename(f.id, e.target);
+    });
+    row.addEventListener('contextmenu', e => {
+      e.preventDefault(); showCtxMenu(e.clientX, e.clientY, f.id);
+    });
+    floorsList.appendChild(row);
+  }
+  updateMapDisplay(false);
+}
+
+function updateMapDisplay(animate) {
+  const f = getFloor(activeId);
+  badgeName.textContent = f ? f.name : '—';
+
+  const show = () => {
+    if (f && f.img) {
+      mapImg.src = f.img;
+      mapImg.style.display = 'block';
+      uploadZone.classList.remove('active');
+      uploadZone.style.display = 'none';
+      replaceBtn.style.display = 'block';
+      fitBtn.style.display = 'block';
+    } else {
+      mapImg.style.display = 'none';
+      userDot.style.display = 'none';
+      uploadZone.classList.add('active');
+      uploadZone.style.display = 'flex';
+      replaceBtn.style.display = 'none';
+      fitBtn.style.display = 'none';
+    }
+  };
+
+  if (animate) {
+    canvas.style.opacity = '0';
+    uploadZone.style.opacity = '0';
+    setTimeout(() => {
+      show();
+      canvas.style.opacity = '1';
+      uploadZone.style.opacity = '1';
+    }, 150);
+  } else {
+    show();
+  }
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ── Transform / Pan / Zoom ──────────────────────────────────
 function applyTransform() {
   canvas.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
-
   const gs = 20 * scale, g5 = 100 * scale;
   const bp = `${tx}px ${ty}px`;
   gridBg.style.backgroundSize = `${g5}px ${g5}px, ${g5}px ${g5}px, ${gs}px ${gs}px, ${gs}px ${gs}px`;
   gridBg.style.backgroundPosition = `${bp}, ${bp}, ${bp}, ${bp}`;
-
   const pct = Math.round(scale * 100);
   zpct.textContent = pct + '%';
-
   const rect = mapWrap.getBoundingClientRect();
   const cx = Math.round((rect.width/2 - tx) / scale);
   const cy = Math.round((rect.height/2 - ty) / scale);
@@ -703,7 +1744,7 @@ function resetView() { tx=0; ty=0; scale=1; applyTransform(); }
 function fitToScreen() {
   if (!mapImg.naturalWidth) return;
   const rect = mapWrap.getBoundingClientRect();
-  const margin = 40;
+  const margin = 32;
   const sw = rect.width - margin*2, sh = rect.height - margin*2;
   const iw = mapImg.naturalWidth, ih = mapImg.naturalHeight;
   const s = Math.min(sw/iw, sh/ih, 1);
@@ -713,9 +1754,11 @@ function fitToScreen() {
   applyTransform();
 }
 
-// Mouse pan
+// ── Mouse pan ───────────────────────────────────────────────
 mapWrap.addEventListener('mousedown', e => {
-  if (uploadZone.contains(e.target) || ctxMenu.contains(e.target)) return;
+  if (uploadZone.contains(e.target) && uploadZone.classList.contains('active')) return;
+  if (ctxMenu.contains(e.target)) return;
+  if (userDotDragging) return;
   if (e.button !== 0) return;
   dragging = true;
   dx0 = e.clientX; dy0 = e.clientY; tx0 = tx; ty0 = ty;
@@ -735,7 +1778,6 @@ document.addEventListener('mouseup', () => {
   mapWrap.classList.remove('grabbing');
 });
 
-// Wheel zoom
 mapWrap.addEventListener('wheel', e => {
   e.preventDefault();
   const rect = mapWrap.getBoundingClientRect();
@@ -744,10 +1786,11 @@ mapWrap.addEventListener('wheel', e => {
   doZoom(factor, mx, my);
 }, { passive: false });
 
-// Touch support
+// ── Touch pan/zoom ───────────────────────────────────────────
 let touches = [], lastPinchDist = 0;
 
 mapWrap.addEventListener('touchstart', e => {
+  if (userDotDragging) return;
   touches = Array.from(e.touches);
   if (touches.length === 1) {
     dx0 = touches[0].clientX; dy0 = touches[0].clientY;
@@ -759,6 +1802,7 @@ mapWrap.addEventListener('touchstart', e => {
 }, { passive: false });
 
 mapWrap.addEventListener('touchmove', e => {
+  if (userDotDragging) return;
   const t = Array.from(e.touches);
   if (t.length === 1) {
     tx = tx0 + (t[0].clientX - dx0);
@@ -794,15 +1838,11 @@ document.addEventListener('keydown', e => {
   if (e.key === '=' || e.key === '+') doZoom(1.25);
   if (e.key === '-') doZoom(0.8);
   if (e.key === '0') resetView();
-  if (e.key === 'f' || e.key === 'а') fitToScreen();  // f = fit (ru: а)
-
-  // Arrow keys to pan
+  if (e.key === 'f' || e.key === 'а') fitToScreen();
   if (e.key === 'ArrowLeft')  { tx += 40; applyTransform(); }
   if (e.key === 'ArrowRight') { tx -= 40; applyTransform(); }
   if (e.key === 'ArrowUp')    { ty += 40; applyTransform(); }
   if (e.key === 'ArrowDown')  { ty -= 40; applyTransform(); }
-
-  // Floor switching with PageUp / PageDown
   if (e.key === 'PageUp') {
     const idx = floors.findIndex(f => f.id === activeId);
     if (idx < floors.length - 1) switchFloor(floors[idx + 1].id);
@@ -813,32 +1853,73 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ── Toast notification ──────────────────────────────────────
-function showToast(msg) {
+// ── Mobile sidebar ──────────────────────────────────────────
+function toggleSidebar() {
+  sidebar.classList.toggle('open');
+  sidebarOverlay.classList.toggle('show');
+}
+function closeSidebar() {
+  if (window.innerWidth < 640) {
+    sidebar.classList.remove('open');
+    sidebarOverlay.classList.remove('show');
+  }
+}
+
+// ── Toast ────────────────────────────────────────────────────
+function showToast(msg, type) {
   const t = document.createElement('div');
   t.textContent = msg;
   Object.assign(t.style, {
-    position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-    background: '#1e293b', color: '#e2e8f0',
-    padding: '10px 20px', borderRadius: '8px',
+    background: type === 'error' ? '#ef4444' : '#1e293b',
+    color: '#e2e8f0',
+    padding: '9px 18px',
+    borderRadius: '8px',
     fontSize: '13px', fontWeight: '500',
     boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-    zIndex: '9999', pointerEvents: 'none',
+    pointerEvents: 'none',
     transition: 'opacity 0.3s',
+    maxWidth: '90vw',
+    textAlign: 'center',
   });
-  document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
+  document.getElementById('toastWrap').appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2800);
 }
 
-// ── mapImg fit on load ──────────────────────────────────────
+// ── mapImg fit on load ───────────────────────────────────────
 mapImg.addEventListener('load', () => {
-  // Only auto-fit when first loading (not on floor switch re-render)
   if (scale === 1 && tx === 0 && ty === 0) fitToScreen();
+  if (gpsActive && insideGeofence) showUserOnMap();
 });
 
-// ── Init ────────────────────────────────────────────────────
+// Building name save
+document.getElementById('buildingName').addEventListener('input', () => saveToStorage());
+
+// ── Simulate broadcast for other browser tabs (storage event) ──
+window.addEventListener('storage', e => {
+  if (e.key === 'floormap_data') {
+    try {
+      const data = JSON.parse(e.newValue);
+      if (data.broadcastData) {
+        currentBroadcastData = data.broadcastData;
+        showBroadcastBanner();
+      } else {
+        currentBroadcastData = null;
+        document.getElementById('broadcastBanner').classList.remove('show');
+        closeBroadcast();
+      }
+    } catch(e) {}
+  }
+});
+
+// ── INIT ─────────────────────────────────────────────────────
+loadFromStorage();
 render();
 applyTransform();
+
+// Show hint on mobile
+if (window.innerWidth < 640) {
+  setTimeout(() => showToast('☰ Нажмите кнопку меню для выбора этажа'), 800);
+}
 </script>
 </body>
 </html>
