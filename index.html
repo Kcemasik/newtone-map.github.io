@@ -844,9 +844,9 @@ aside {
 
     <div class="upload-zone" id="uploadZone">
       <div class="upload-card" id="uploadCard" onclick="openPicker()">
-        <span class="upload-icon">🗺️</span>
-        <div class="upload-title">Загрузить карту этажа</div>
-        <div class="upload-sub">Нажмите или перетащите изображение<br>PNG, JPG, SVG, WebP</div>
+        <span class="upload-icon" id="uploadIcon">🗺️</span>
+        <div class="upload-title" id="uploadTitle">Загрузить карту этажа</div>
+        <div class="upload-sub" id="uploadSub">Нажмите или перетащите изображение<br>PNG, JPG, SVG, WebP</div>
       </div>
     </div>
 
@@ -924,6 +924,28 @@ aside {
             <input type="password" class="form-input" id="newPasswordInput" placeholder="Новый пароль...">
           </div>
           <button class="admin-btn secondary" onclick="changeAdminPassword()">Сменить пароль</button>
+        </div>
+
+        <!-- Section: Floor map images (admin-only) -->
+        <div class="admin-section">
+          <div class="admin-section-title">🗺️ Карты этажей</div>
+          <p class="form-hint">Загрузка и замена изображений карт доступна только администратору. Пользователи могут только просматривать карты.</p>
+          <div class="form-row" style="margin-top:10px;">
+            <label class="form-label">Этаж</label>
+            <select class="form-input" id="floorMapSelect" onchange="onFloorMapSelectChange()"></select>
+          </div>
+          <div class="broadcast-preview-wrap" id="floorMapPreviewWrap">
+            <img class="broadcast-preview-img" id="floorMapPreviewImg" src="" alt="">
+            <span class="broadcast-preview-label" id="floorMapPreviewLabel">Текущая карта</span>
+          </div>
+          <div class="form-row" style="margin-top:10px;">
+            <input type="file" id="floorMapPicker" accept="image/*" style="display:none" onchange="handleFloorMapFile(event)">
+            <button class="admin-btn secondary" onclick="document.getElementById('floorMapPicker').click()">
+              📤 Загрузить / заменить карту этажа
+            </button>
+          </div>
+          <button class="admin-btn danger" onclick="clearFloorMap()" style="margin-top:6px;">✕ Удалить карту этажа</button>
+          <div id="floorMapStatus" style="margin-top:8px; font-size:11px; color:var(--t3);"></div>
         </div>
 
         <!-- Section: Broadcast -->
@@ -1052,6 +1074,9 @@ const canvas     = document.getElementById('canvas');
 const mapImg     = document.getElementById('mapImg');
 const uploadZone = document.getElementById('uploadZone');
 const uploadCard = document.getElementById('uploadCard');
+const uploadIcon = document.getElementById('uploadIcon');
+const uploadTitle= document.getElementById('uploadTitle');
+const uploadSub  = document.getElementById('uploadSub');
 const floorsList = document.getElementById('floorsList');
 const badgeName  = document.getElementById('badgeName');
 const replaceBtn = document.getElementById('replaceBtn');
@@ -1136,6 +1161,7 @@ function showAdminMain() {
   document.getElementById('adminMainView').style.display = '';
   renderFloorGeoList();
   loadGeofenceToAdmin();
+  renderFloorMapSelect();
 }
 
 function tryAdminLogin() {
@@ -1144,6 +1170,7 @@ function tryAdminLogin() {
     isAdminLoggedIn = true;
     document.getElementById('adminLoginError').style.display = 'none';
     showAdminMain();
+    updateMapDisplay(false);
   } else {
     document.getElementById('adminLoginError').style.display = 'block';
     document.getElementById('adminPasswordInput').value = '';
@@ -1162,6 +1189,7 @@ function changeAdminPassword() {
 function adminLogout() {
   isAdminLoggedIn = false;
   closeAdmin();
+  updateMapDisplay(false);
   showToast('Вы вышли из панели администратора');
 }
 
@@ -1224,6 +1252,90 @@ function closeBroadcast() {
   if (currentBroadcastData) {
     document.getElementById('broadcastBanner').classList.add('show');
   }
+}
+
+// ═══════════════════════════════════════════════════
+//  FLOOR MAP IMAGES (admin-only — пользователь не может менять)
+// ═══════════════════════════════════════════════════
+let pendingFloorMapFile = null;
+let floorMapSelectedId = null;
+
+function renderFloorMapSelect() {
+  const sel = document.getElementById('floorMapSelect');
+  if (!sel) return;
+  const prev = floorMapSelectedId;
+  sel.innerHTML = '';
+  floors.forEach((f, i) => {
+    const opt = document.createElement('option');
+    opt.value = f.id;
+    opt.textContent = `${i+1}. ${f.name}${f.img ? '' : ' (нет карты)'}`;
+    sel.appendChild(opt);
+  });
+  // Preserve previous selection if still exists, otherwise default to active floor
+  const keep = floors.find(f => f.id === prev) ? prev : activeId;
+  floorMapSelectedId = keep;
+  sel.value = keep;
+  updateFloorMapPreview();
+}
+
+function onFloorMapSelectChange() {
+  const sel = document.getElementById('floorMapSelect');
+  floorMapSelectedId = parseInt(sel.value, 10);
+  pendingFloorMapFile = null;
+  updateFloorMapPreview();
+}
+
+function updateFloorMapPreview() {
+  const f = getFloor(floorMapSelectedId);
+  const wrap = document.getElementById('floorMapPreviewWrap');
+  const img  = document.getElementById('floorMapPreviewImg');
+  const lbl  = document.getElementById('floorMapPreviewLabel');
+  if (f && f.img) {
+    img.src = f.img;
+    lbl.textContent = 'Текущая карта';
+    wrap.classList.add('show');
+  } else {
+    img.src = '';
+    wrap.classList.remove('show');
+  }
+  document.getElementById('floorMapStatus').textContent = f
+    ? (f.img ? `Карта загружена для «${f.name}»` : `Для «${f.name}» карта не загружена`)
+    : '';
+}
+
+function handleFloorMapFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('Пожалуйста, выберите изображение'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const f = getFloor(floorMapSelectedId);
+    if (!f) return;
+    f.img = ev.target.result;
+    saveToStorage();
+    renderFloorMapSelect();
+    render(); // refresh sidebar thumbnails
+    if (activeId === f.id) {
+      updateMapDisplay(true);
+      fitToScreen();
+    }
+    document.getElementById('floorMapStatus').textContent = `✅ Карта для «${f.name}» обновлена`;
+    showToast(`✅ Карта этажа «${f.name}» обновлена`);
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearFloorMap() {
+  const f = getFloor(floorMapSelectedId);
+  if (!f) return;
+  if (!f.img) { showToast('У этого этажа нет карты'); return; }
+  f.img = null;
+  saveToStorage();
+  renderFloorMapSelect();
+  render();
+  if (activeId === f.id) updateMapDisplay(true);
+  document.getElementById('floorMapStatus').textContent = `Карта для «${f.name}» удалена`;
+  showToast(`Карта этажа «${f.name}» удалена`);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1545,6 +1657,7 @@ function addFloor() {
   switchFloor(newFloor.id);
   render();
   saveToStorage();
+  if (isAdminLoggedIn) renderFloorMapSelect();
 }
 
 function deleteFloor(id) {
@@ -1554,6 +1667,7 @@ function deleteFloor(id) {
   if (activeId === id) activeId = floors[Math.max(0, idx - 1)].id;
   render();
   saveToStorage();
+  if (isAdminLoggedIn) renderFloorMapSelect();
 }
 
 // ── Inline rename ───────────────────────────────────────────
@@ -1571,6 +1685,7 @@ function startRename(id, displayEl) {
     render();
     if (activeId === id) badgeName.textContent = f.name;
     saveToStorage();
+    if (isAdminLoggedIn) renderFloorMapSelect();
   };
   input.addEventListener('blur', commit);
   input.addEventListener('keydown', e => {
@@ -1584,6 +1699,7 @@ function startRename(id, displayEl) {
 // ── Context menu ────────────────────────────────────────────
 function showCtxMenu(x, y, id) {
   ctxTargetId = id;
+  document.getElementById('ctxUpload').style.display = isAdminLoggedIn ? '' : 'none';
   ctxMenu.style.display = 'block';
   const mw = ctxMenu.offsetWidth, mh = ctxMenu.offsetHeight;
   ctxMenu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
@@ -1603,8 +1719,16 @@ document.getElementById('ctxDelete').onclick = () => { deleteFloor(ctxTargetId);
 document.addEventListener('click', hideCtxMenu);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideCtxMenu(); });
 
-// ── File upload ─────────────────────────────────────────────
-function openPicker() { filePicker.value = ''; filePicker.click(); }
+// ── File upload (только администратор) ──────────────────────
+function openPicker() {
+  if (!isAdminLoggedIn) {
+    showToast('🔒 Карты этажей загружает только администратор');
+    openAdmin();
+    return;
+  }
+  filePicker.value = '';
+  filePicker.click();
+}
 
 filePicker.onchange = e => {
   const file = e.target.files[0];
@@ -1612,6 +1736,10 @@ filePicker.onchange = e => {
 };
 
 function loadImageFile(file) {
+  if (!isAdminLoggedIn) {
+    showToast('🔒 Карты этажей загружает только администратор');
+    return;
+  }
   if (!file.type.startsWith('image/')) { showToast('Пожалуйста, выберите изображение'); return; }
   const reader = new FileReader();
   reader.onload = ev => {
@@ -1629,7 +1757,7 @@ function loadImageFile(file) {
 ['dragover','dragleave','drop'].forEach(type => {
   uploadCard.addEventListener(type, e => {
     e.preventDefault(); e.stopPropagation();
-    uploadCard.classList.toggle('dragover', type === 'dragover');
+    uploadCard.classList.toggle('dragover', type === 'dragover' && isAdminLoggedIn);
     if (type === 'drop' && e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
   });
 });
@@ -1683,15 +1811,28 @@ function updateMapDisplay(animate) {
       mapImg.style.display = 'block';
       uploadZone.classList.remove('active');
       uploadZone.style.display = 'none';
-      replaceBtn.style.display = 'block';
+      replaceBtn.style.display = isAdminLoggedIn ? 'block' : 'none';
       fitBtn.style.display = 'block';
     } else {
       mapImg.style.display = 'none';
       userDot.style.display = 'none';
-      uploadZone.classList.add('active');
       uploadZone.style.display = 'flex';
       replaceBtn.style.display = 'none';
       fitBtn.style.display = 'none';
+
+      if (isAdminLoggedIn) {
+        uploadZone.classList.add('active');
+        uploadCard.style.cursor = 'pointer';
+        uploadIcon.textContent = '🗺️';
+        uploadTitle.textContent = 'Загрузить карту этажа';
+        uploadSub.innerHTML = 'Нажмите или перетащите изображение<br>PNG, JPG, SVG, WebP';
+      } else {
+        uploadZone.classList.remove('active');
+        uploadCard.style.cursor = 'default';
+        uploadIcon.textContent = '🔒';
+        uploadTitle.textContent = 'Карта пока не загружена';
+        uploadSub.innerHTML = 'Карты этажей загружает<br>только администратор';
+      }
     }
   };
 
