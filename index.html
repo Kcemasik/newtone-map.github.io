@@ -1,3 +1,4 @@
+cat > /home/claude/floormap_new.html << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -22,6 +23,7 @@
   --danger:    #ef4444;
   --warn:      #f59e0b;
   --user-dot:  #ef4444;
+  --admin-accent: #a855f7;
 }
 
 html, body {
@@ -36,7 +38,20 @@ html, body {
 
 body { display: flex; flex-direction: column; height: 100dvh; }
 
-/* ── HEADER ──────────────────────────── */
+/* ── ADMIN MODE INDICATOR (top stripe) ── */
+.admin-stripe {
+  height: 0;
+  background: linear-gradient(90deg, #7c3aed, #a855f7, #7c3aed);
+  overflow: hidden;
+  transition: height 0.2s;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+  color: #fff; gap: 8px;
+}
+body.admin-mode .admin-stripe { height: 26px; }
+
+/* ── HEADER ── */
 header {
   height: 48px;
   background: var(--sidebar);
@@ -47,227 +62,192 @@ header {
   gap: 10px;
   flex-shrink: 0;
   z-index: 10;
+  transition: border-color 0.2s;
 }
+body.admin-mode header { border-bottom-color: rgba(168,85,247,0.4); }
 
 .logo {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  color: var(--accent);
-  flex-shrink: 0;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  color: var(--accent); flex-shrink: 0;
 }
+body.admin-mode .logo { color: var(--admin-accent); }
 
 .hdiv { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; }
 
 .building-input {
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--t1);
-  min-width: 0;
-  flex: 1;
-  cursor: text;
-  user-select: text;
+  background: transparent; border: none; outline: none;
+  font-size: 14px; font-weight: 500; color: var(--t1);
+  min-width: 0; flex: 1; cursor: text; user-select: text;
 }
 .building-input::placeholder { color: var(--t3); }
 
 .header-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+  margin-left: auto; display: flex; align-items: center;
+  gap: 8px; flex-shrink: 0;
 }
 
 .header-meta {
-  font-size: 11px;
-  color: var(--t3);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.03em;
-  display: none;
+  font-size: 11px; color: var(--t3); font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em; display: none;
 }
-
-@media (min-width: 640px) {
-  .header-meta { display: block; }
-}
+@media (min-width: 640px) { .header-meta { display: block; } }
 
 .icon-btn {
-  width: 32px; height: 32px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  color: var(--t2);
-  font-size: 16px;
-  cursor: pointer;
+  width: 32px; height: 32px; background: transparent;
+  border: 1px solid var(--border); border-radius: 7px;
+  color: var(--t2); font-size: 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.12s;
-  flex-shrink: 0;
+  transition: all 0.12s; flex-shrink: 0;
 }
 .icon-btn:hover { background: var(--hover); color: var(--t1); border-color: rgba(255,255,255,0.15); }
 .icon-btn.active { background: rgba(59,130,246,0.15); border-color: var(--accent); color: var(--accent); }
 
-/* ── LAYOUT ──────────────────────────── */
+/* Admin login button - key icon, pulses when logged out */
+#adminBtn { position: relative; }
+body.admin-mode #adminBtn {
+  background: rgba(168,85,247,0.15);
+  border-color: rgba(168,85,247,0.5);
+  color: var(--admin-accent);
+}
+
+/* ── LAYOUT ── */
 main { flex: 1; display: flex; overflow: hidden; position: relative; min-height: 0; }
 
-/* ── SIDEBAR ─────────────────────────── */
+/* ── SIDEBAR ── */
 aside {
-  width: 200px;
-  flex-shrink: 0;
+  width: 200px; flex-shrink: 0;
   background: var(--sidebar);
   border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.25s ease, width 0.25s ease;
+  display: flex; flex-direction: column;
+  transition: transform 0.25s ease, width 0.25s ease, border-color 0.2s;
   z-index: 20;
 }
+body.admin-mode aside { border-right-color: rgba(168,85,247,0.2); }
 
 @media (max-width: 639px) {
   aside {
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 220px;
-    transform: translateX(-100%);
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 220px; transform: translateX(-100%);
     box-shadow: 4px 0 20px rgba(0,0,0,0.5);
   }
   aside.open { transform: translateX(0); }
   .sidebar-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 19;
-    display: none;
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 19; display: none;
   }
   .sidebar-overlay.show { display: block; }
 }
 
 .sidebar-label {
-  padding: 12px 16px 6px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--t3);
+  padding: 12px 16px 6px; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.12em; color: var(--t3);
 }
 
 .floors-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex: 1; overflow-y: auto; padding: 4px 8px;
+  display: flex; flex-direction: column; gap: 1px;
 }
 .floors-list::-webkit-scrollbar { width: 3px; }
 .floors-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 .frow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 8px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: background 0.1s;
-  position: relative;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 8px; border-radius: 8px;
+  border: 1px solid transparent; cursor: pointer;
+  transition: background 0.1s; position: relative;
 }
 .frow:hover { background: var(--hover); }
 .frow.active { background: var(--active-bg); border-color: var(--active-bd); }
-
-/* User is on this floor indicator */
 .frow.user-here::after {
-  content: '';
-  position: absolute;
-  right: 8px; top: 50%; transform: translateY(-50%);
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--user-dot);
-  box-shadow: 0 0 6px var(--user-dot);
+  content: ''; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--user-dot); box-shadow: 0 0 6px var(--user-dot);
   animation: blink 1.5s ease-in-out infinite;
 }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
 .fnum {
-  width: 24px; height: 24px;
-  border-radius: 6px;
+  width: 24px; height: 24px; border-radius: 6px;
   font-size: 11px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  background: rgba(255,255,255,0.04);
-  color: var(--t2);
+  flex-shrink: 0; background: rgba(255,255,255,0.04); color: var(--t2);
   font-variant-numeric: tabular-nums;
 }
 .frow.active .fnum { background: var(--accent); color: #fff; }
 
 .finfo { flex: 1; min-width: 0; }
 .fname-display {
-  font-size: 12px; font-weight: 500;
-  color: var(--t1);
+  font-size: 12px; font-weight: 500; color: var(--t1);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .fstatus { font-size: 10px; color: var(--t3); margin-top: 1px; }
 .fstatus.ok { color: var(--success); }
 
 .fthumb {
-  width: 30px; height: 22px;
-  border-radius: 4px; overflow: hidden; flex-shrink: 0;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
+  width: 30px; height: 22px; border-radius: 4px; overflow: hidden;
+  flex-shrink: 0; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
 }
 .fthumb img { width: 100%; height: 100%; object-fit: cover; }
 
 .fname-input {
-  width: 100%;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  outline: none;
-  font-size: 12px; font-weight: 500;
-  color: var(--t1);
-  padding: 2px 5px;
-  font-family: inherit;
-  user-select: text;
+  width: 100%; background: rgba(255,255,255,0.06);
+  border: 1px solid var(--accent); border-radius: 4px;
+  outline: none; font-size: 12px; font-weight: 500;
+  color: var(--t1); padding: 2px 5px; font-family: inherit; user-select: text;
 }
 
-.sidebar-footer {
+/* Admin toolbar in sidebar - only in admin mode */
+.sidebar-admin-toolbar {
+  display: none;
   padding: 8px;
-  border-top: 1px solid var(--border);
-  display: flex;
+  border-top: 1px solid rgba(168,85,247,0.2);
+  background: rgba(168,85,247,0.04);
+  flex-direction: column;
   gap: 5px;
 }
+body.admin-mode .sidebar-admin-toolbar { display: flex; }
+
+.sidebar-footer {
+  padding: 8px; border-top: 1px solid var(--border);
+  display: flex; gap: 5px;
+}
+/* In admin mode, hide normal footer entirely */
+body.admin-mode .sidebar-footer { display: none; }
 
 .sbtn {
-  flex: 1;
-  padding: 7px 6px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: transparent;
-  color: var(--t2);
-  font-size: 11px; font-family: inherit;
-  cursor: pointer;
+  flex: 1; padding: 7px 6px; border: 1px solid var(--border);
+  border-radius: 7px; background: transparent; color: var(--t2);
+  font-size: 11px; font-family: inherit; cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 4px;
   transition: all 0.12s;
 }
 .sbtn:hover { background: var(--hover); color: var(--t1); border-color: rgba(255,255,255,0.15); }
 .sbtn-del:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171; }
 .sbtn-narrow { flex: none; width: 32px; padding: 0; }
+.sbtn-purple {
+  border-color: rgba(168,85,247,0.3); color: var(--admin-accent);
+  background: rgba(168,85,247,0.06);
+}
+.sbtn-purple:hover { background: rgba(168,85,247,0.14); border-color: rgba(168,85,247,0.5); color: #c084fc; }
 
-/* ── MAP AREA ─────────────────────────── */
+/* Admin sidebar label chip */
+.admin-sidebar-chip {
+  font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em;
+  color: var(--admin-accent); background: rgba(168,85,247,0.1);
+  border: 1px solid rgba(168,85,247,0.2); border-radius: 4px;
+  padding: 2px 7px; display: inline-flex; align-items: center; gap: 4px;
+  margin: 8px 16px 2px;
+}
+
+/* ── MAP AREA ── */
 .map-wrap {
-  flex: 1;
-  position: relative;
-  background: #eef2f7;
-  overflow: hidden;
-  cursor: grab;
-  min-width: 0;
+  flex: 1; position: relative; background: #eef2f7;
+  overflow: hidden; cursor: grab; min-width: 0;
 }
 .map-wrap.grabbing { cursor: grabbing; }
 
 .grid-bg {
-  position: absolute; inset: 0;
-  pointer-events: none;
+  position: absolute; inset: 0; pointer-events: none;
   background-image:
     linear-gradient(rgba(148,163,184,0.5) 1px, transparent 1px),
     linear-gradient(90deg, rgba(148,163,184,0.5) 1px, transparent 1px),
@@ -278,41 +258,25 @@ aside {
 
 .canvas {
   position: absolute; top: 0; left: 0;
-  transform-origin: 0 0;
-  transition: opacity 0.15s ease;
+  transform-origin: 0 0; transition: opacity 0.15s ease;
 }
 .canvas img {
-  display: block;
-  max-width: none;
-  pointer-events: none;
-  user-select: none;
+  display: block; max-width: none; pointer-events: none; user-select: none;
 }
 
-/* User dot on map */
 #userDot {
-  position: absolute;
-  width: 18px; height: 18px;
-  margin: -9px 0 0 -9px;
-  border-radius: 50%;
-  background: var(--user-dot);
-  border: 2.5px solid #fff;
+  position: absolute; width: 18px; height: 18px;
+  margin: -9px 0 0 -9px; border-radius: 50%;
+  background: var(--user-dot); border: 2.5px solid #fff;
   box-shadow: 0 0 0 3px rgba(239,68,68,0.3), 0 2px 8px rgba(0,0,0,0.4);
-  z-index: 100;
-  pointer-events: none;
-  display: none;
+  z-index: 100; pointer-events: none; display: none;
   animation: pulseDot 2s ease-in-out infinite;
 }
 #userDot::after {
-  content: 'Вы';
-  position: absolute;
-  top: -20px; left: 50%;
-  transform: translateX(-50%);
-  font-size: 9px; font-weight: 700;
-  color: #fff;
-  background: var(--user-dot);
-  padding: 2px 5px;
-  border-radius: 4px;
-  white-space: nowrap;
+  content: 'Вы'; position: absolute; top: -20px; left: 50%;
+  transform: translateX(-50%); font-size: 9px; font-weight: 700;
+  color: #fff; background: var(--user-dot); padding: 2px 5px;
+  border-radius: 4px; white-space: nowrap;
 }
 @keyframes pulseDot {
   0%,100% { box-shadow: 0 0 0 3px rgba(239,68,68,0.3), 0 2px 8px rgba(0,0,0,0.4); }
@@ -321,68 +285,38 @@ aside {
 
 /* Broadcast images overlay */
 #broadcastOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 200;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.85);
-  backdrop-filter: blur(4px);
+  position: absolute; inset: 0; z-index: 200; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
 }
 #broadcastOverlay.show { display: flex; }
-#broadcastImg {
-  max-width: 90%;
-  max-height: 90%;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-  object-fit: contain;
-}
+#broadcastImg { max-width: 90%; max-height: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); object-fit: contain; }
 .broadcast-close {
-  position: absolute;
-  top: 16px; right: 16px;
-  width: 36px; height: 36px;
-  background: rgba(255,255,255,0.15);
-  border: none;
-  border-radius: 50%;
-  color: #fff;
-  font-size: 20px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
+  position: absolute; top: 16px; right: 16px;
+  width: 36px; height: 36px; background: rgba(255,255,255,0.15);
+  border: none; border-radius: 50%; color: #fff; font-size: 20px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 .broadcast-info {
-  position: absolute;
-  bottom: 24px; left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255,255,255,0.1);
-  color: #fff;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 12px;
-  white-space: nowrap;
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,0.1); color: #fff; padding: 8px 16px;
+  border-radius: 20px; font-size: 12px; white-space: nowrap;
 }
 
 /* Upload zone */
 .upload-zone {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  pointer-events: none;
+  position: absolute; inset: 0; display: flex;
+  align-items: center; justify-content: center; pointer-events: none;
 }
 .upload-zone.active { pointer-events: all; }
 .upload-card {
-  background: #fff;
-  border: 2px dashed #cbd5e1;
-  border-radius: 16px;
-  padding: 36px 48px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.18s;
-  max-width: 340px;
-  width: 90%;
+  background: #fff; border: 2px dashed #cbd5e1; border-radius: 16px;
+  padding: 36px 48px; text-align: center; cursor: pointer;
+  transition: all 0.18s; max-width: 340px; width: 90%;
 }
-.upload-card:hover, .upload-card.dragover {
-  border-color: var(--accent);
-  background: #f0f7ff;
+.upload-card.no-perms { cursor: default; }
+.upload-card:not(.no-perms):hover, .upload-card.dragover {
+  border-color: var(--accent); background: #f0f7ff;
 }
 .upload-icon { font-size: 36px; margin-bottom: 12px; display: block; }
 .upload-title { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 5px; }
@@ -390,62 +324,60 @@ aside {
 
 /* Floor badge */
 .floor-badge {
-  position: absolute;
-  top: 12px; left: 12px;
-  background: rgba(255,255,255,0.95);
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 6px 12px;
+  position: absolute; top: 12px; left: 12px;
+  background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0;
+  border-radius: 10px; padding: 6px 12px;
   display: flex; align-items: center; gap: 7px;
-  pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-  z-index: 5;
+  pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.07); z-index: 5;
 }
 .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+body.admin-mode .badge-dot { background: var(--admin-accent); }
 .badge-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
 .badge-name { font-size: 12px; font-weight: 700; color: #0f172a; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* GPS status badge */
 .gps-badge {
-  position: absolute;
-  top: 12px; right: 12px;
-  background: rgba(255,255,255,0.95);
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 6px 12px;
+  position: absolute; top: 12px; right: 12px;
+  background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0;
+  border-radius: 10px; padding: 6px 12px;
   display: flex; align-items: center; gap: 6px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-  z-index: 5;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07); z-index: 5;
+  font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
 .gps-badge:hover { background: #f0f7ff; border-color: var(--accent); }
-.gps-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #94a3b8;
-  flex-shrink: 0;
-  transition: background 0.3s;
-}
+.gps-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; flex-shrink: 0; transition: background 0.3s; }
 .gps-dot.active { background: var(--success); box-shadow: 0 0 6px var(--success); animation: blink 1.5s ease-in-out infinite; }
-.gps-dot.error  { background: var(--danger); }
+.gps-dot.error { background: var(--danger); }
 .gps-dot.searching { background: var(--warn); animation: blink 0.8s ease-in-out infinite; }
 .gps-label { color: #475569; }
 
+/* Admin overlay on map canvas - shown in admin mode */
+.admin-map-bar {
+  position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%);
+  display: none; align-items: center; gap: 8px; z-index: 10;
+  background: rgba(15,7,30,0.85); border: 1px solid rgba(168,85,247,0.4);
+  backdrop-filter: blur(8px); border-radius: 12px; padding: 8px 14px;
+  white-space: nowrap;
+}
+body.admin-mode .admin-map-bar { display: flex; }
+.admin-map-bar-label { font-size: 11px; color: #c084fc; font-weight: 600; letter-spacing: 0.06em; }
+.admin-map-btn {
+  padding: 5px 12px; border-radius: 7px; border: 1px solid rgba(168,85,247,0.35);
+  background: rgba(168,85,247,0.12); color: #c084fc;
+  font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: all 0.12s;
+}
+.admin-map-btn:hover { background: rgba(168,85,247,0.25); border-color: rgba(168,85,247,0.6); color: #e9d5ff; }
+.admin-map-btn.danger { border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.1); color: #f87171; }
+.admin-map-btn.danger:hover { background: rgba(239,68,68,0.2); }
+
 /* Replace/Fit buttons */
 .replace-btn, .fit-btn {
-  position: absolute;
-  background: rgba(255,255,255,0.95);
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 11px; font-weight: 600;
-  color: #475569; cursor: pointer;
-  transition: all 0.14s;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-  display: none;
-  z-index: 5;
+  position: absolute; background: rgba(255,255,255,0.95);
+  border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px;
+  font-size: 11px; font-weight: 600; color: #475569; cursor: pointer;
+  transition: all 0.14s; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  display: none; z-index: 5;
 }
 .replace-btn { bottom: 60px; right: 12px; }
 .fit-btn { bottom: 12px; left: 50%; transform: translateX(-50%); }
@@ -453,348 +385,215 @@ aside {
 
 /* Zoom controls */
 .zoom-controls {
-  position: absolute;
-  bottom: 12px; right: 12px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  z-index: 5;
+  position: absolute; bottom: 12px; right: 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; z-index: 5;
 }
 .zbtn {
-  width: 34px; height: 34px;
-  background: rgba(255,255,255,0.95);
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 18px; line-height: 1;
-  cursor: pointer;
-  color: #475569;
+  width: 34px; height: 34px; background: rgba(255,255,255,0.95);
+  border: 1px solid #e2e8f0; border-radius: 8px;
+  font-size: 18px; line-height: 1; cursor: pointer; color: #475569;
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.12s;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  transition: all 0.12s; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
 }
 .zbtn:hover { border-color: var(--accent); color: var(--accent); }
 .zpct { font-size: 10px; color: #94a3b8; font-variant-numeric: tabular-nums; }
 
 /* Context menu */
 .ctx-menu {
-  position: fixed;
-  background: var(--sidebar);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 10px;
-  padding: 5px;
-  min-width: 160px;
-  z-index: 9999;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  display: none;
+  position: fixed; background: var(--sidebar);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+  padding: 5px; min-width: 160px; z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: none;
 }
 .ctx-item {
-  padding: 7px 12px;
-  font-size: 13px;
-  color: var(--t2);
-  cursor: pointer;
-  border-radius: 6px;
-  display: flex; align-items: center; gap: 8px;
-  transition: background 0.1s;
+  padding: 7px 12px; font-size: 13px; color: var(--t2); cursor: pointer;
+  border-radius: 6px; display: flex; align-items: center; gap: 8px; transition: background 0.1s;
 }
 .ctx-item:hover { background: var(--hover); color: var(--t1); }
 .ctx-item.danger:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+.ctx-item.admin-only { display: none; }
+body.admin-mode .ctx-item.admin-only { display: flex; }
 .ctx-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
-/* ── ADMIN PANEL ─────────────────────── */
-.admin-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.7);
-  z-index: 5000;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+/* ── LOGIN MODAL ── */
+.login-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  z-index: 8000; display: none; align-items: center; justify-content: center; padding: 16px;
 }
-.admin-overlay.show { display: flex; }
-
-.admin-panel {
-  background: var(--sidebar);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 16px;
-  width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
-  overflow-y: auto;
+.login-overlay.show { display: flex; }
+.login-box {
+  background: var(--sidebar); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px; width: 100%; max-width: 340px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  padding: 28px 24px; display: flex; flex-direction: column;
+  align-items: center; gap: 14px; text-align: center;
 }
-.admin-panel::-webkit-scrollbar { width: 4px; }
-.admin-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.login-icon { font-size: 38px; }
+.login-title { font-size: 16px; font-weight: 700; color: var(--t1); }
+.login-sub { font-size: 12px; color: var(--t3); line-height: 1.5; }
+.login-input {
+  width: 100%; background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 14px; font-size: 16px; letter-spacing: 0.18em;
+  color: var(--t1); font-family: inherit; outline: none;
+  text-align: center; transition: border-color 0.15s;
+}
+.login-input:focus { border-color: var(--admin-accent); }
+.login-error { font-size: 12px; color: var(--danger); display: none; }
+.login-btn {
+  width: 100%; padding: 10px; background: var(--admin-accent);
+  border: none; border-radius: 8px; color: #fff;
+  font-size: 13px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.login-btn:hover { opacity: 0.85; }
+.login-cancel {
+  font-size: 12px; color: var(--t3); cursor: pointer;
+  background: none; border: none; font-family: inherit;
+}
+.login-cancel:hover { color: var(--t2); }
 
-.admin-header {
-  padding: 18px 20px 14px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* ── SETTINGS MODAL (admin only) ── */
+.settings-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  z-index: 7000; display: none; align-items: center; justify-content: center; padding: 16px;
 }
-.admin-title {
-  font-size: 15px; font-weight: 700;
-  color: var(--t1);
-  flex: 1;
+.settings-overlay.show { display: flex; }
+.settings-panel {
+  background: var(--sidebar); border: 1px solid rgba(168,85,247,0.3);
+  border-radius: 16px; width: 100%; max-width: 500px; max-height: 88vh;
+  overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
 }
-.admin-close {
-  width: 28px; height: 28px;
-  background: rgba(255,255,255,0.06);
-  border: none;
-  border-radius: 6px;
-  color: var(--t2);
-  font-size: 16px;
-  cursor: pointer;
+.settings-panel::-webkit-scrollbar { width: 4px; }
+.settings-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.settings-header {
+  padding: 16px 20px 12px; border-bottom: 1px solid rgba(168,85,247,0.2);
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(168,85,247,0.04);
+}
+.settings-title { font-size: 14px; font-weight: 700; color: var(--t1); flex: 1; }
+.settings-close {
+  width: 28px; height: 28px; background: rgba(255,255,255,0.06); border: none;
+  border-radius: 6px; color: var(--t2); font-size: 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
-.admin-close:hover { background: rgba(239,68,68,0.1); color: #f87171; }
-
-.admin-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 18px; }
-
-.admin-section {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
+.settings-close:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+.settings-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+.settings-section {
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px;
 }
-.admin-section-title {
-  font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.1em;
-  color: var(--t3);
-  margin-bottom: 10px;
+.settings-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--t3); margin-bottom: 10px;
 }
-
 .form-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
 .form-row:last-child { margin-bottom: 0; }
 .form-label { font-size: 12px; font-weight: 500; color: var(--t2); }
 .form-input {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 8px 10px;
-  font-size: 13px;
-  color: var(--t1);
-  font-family: inherit;
-  outline: none;
-  transition: border-color 0.15s;
-  width: 100%;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  border-radius: 7px; padding: 8px 10px; font-size: 13px; color: var(--t1);
+  font-family: inherit; outline: none; transition: border-color 0.15s; width: 100%;
   user-select: text;
 }
-.form-input:focus { border-color: var(--accent); }
-
+.form-input:focus { border-color: var(--admin-accent); }
 .form-hint { font-size: 11px; color: var(--t3); line-height: 1.5; }
-
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-
-.admin-btn {
-  width: 100%;
-  padding: 9px;
-  background: var(--accent);
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 13px; font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: opacity 0.15s;
-  margin-top: 4px;
+.set-btn {
+  width: 100%; padding: 9px; border: none; border-radius: 8px;
+  color: #fff; font-size: 13px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: opacity 0.15s; margin-top: 4px;
+  background: var(--admin-accent);
 }
-.admin-btn:hover { opacity: 0.85; }
-.admin-btn.secondary {
-  background: rgba(255,255,255,0.06);
-  color: var(--t2);
-  border: 1px solid var(--border);
-}
-.admin-btn.danger {
-  background: rgba(239,68,68,0.12);
-  color: #f87171;
-  border: 1px solid rgba(239,68,68,0.2);
-}
-.admin-btn.danger:hover { background: rgba(239,68,68,0.2); }
+.set-btn:hover { opacity: 0.85; }
+.set-btn.secondary { background: rgba(255,255,255,0.06); color: var(--t2); border: 1px solid var(--border); }
+.set-btn.danger { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+.set-btn.danger:hover { background: rgba(239,68,68,0.2); }
 
 /* Broadcast preview */
 .broadcast-preview-wrap {
-  display: none;
-  background: rgba(255,255,255,0.03);
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  margin-top: 8px;
-  position: relative;
+  display: none; background: rgba(255,255,255,0.03); border-radius: 8px;
+  overflow: hidden; border: 1px solid var(--border); margin-top: 8px; position: relative;
 }
 .broadcast-preview-wrap.show { display: block; }
-.broadcast-preview-img {
-  width: 100%; max-height: 160px;
-  object-fit: contain;
-  display: block;
-}
+.broadcast-preview-img { width: 100%; max-height: 140px; object-fit: contain; display: block; }
 .broadcast-preview-label {
-  position: absolute;
-  top: 6px; left: 6px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 9px; font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: 4px;
+  position: absolute; top: 6px; left: 6px; background: var(--admin-accent);
+  color: #fff; font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 2px 7px; border-radius: 4px;
 }
 
-/* Floor geofence list in admin */
+/* Floor geofence list */
 .floor-geo-list { display: flex; flex-direction: column; gap: 8px; }
 .floor-geo-item {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
 }
-.floor-geo-item-header {
-  display: flex; align-items: center; gap: 8px;
-  margin-bottom: 6px;
-}
+.floor-geo-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .floor-geo-num {
-  width: 22px; height: 22px;
-  border-radius: 5px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 10px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+  width: 22px; height: 22px; border-radius: 5px; background: var(--admin-accent);
+  color: #fff; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .floor-geo-name { font-size: 12px; font-weight: 600; color: var(--t1); flex: 1; }
 .floor-geo-toggle {
-  width: 36px; height: 20px;
-  background: var(--t3);
-  border-radius: 10px;
-  position: relative;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.2s;
-  border: none;
+  width: 36px; height: 20px; background: var(--t3); border-radius: 10px;
+  position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.2s; border: none;
 }
 .floor-geo-toggle.on { background: var(--success); }
 .floor-geo-toggle::after {
-  content: '';
-  position: absolute;
-  top: 2px; left: 2px;
-  width: 16px; height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  transition: transform 0.2s;
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.2s;
 }
 .floor-geo-toggle.on::after { transform: translateX(16px); }
 
-/* Login screen */
-.admin-login {
-  padding: 24px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
-.admin-login-icon {
-  font-size: 40px;
-  margin-bottom: 4px;
-}
-.admin-login-title {
-  font-size: 16px; font-weight: 700;
-  color: var(--t1);
-}
-.admin-login-sub {
-  font-size: 12px; color: var(--t3);
-  text-align: center;
-}
-.admin-login-error {
-  font-size: 12px; color: var(--danger);
-  display: none;
+.coord-display {
+  font-size: 11px; color: var(--admin-accent); font-family: 'Courier New', monospace;
+  background: rgba(168,85,247,0.08); padding: 6px 10px; border-radius: 6px;
+  margin-top: 6px; word-break: break-all;
 }
 
-/* Status chips */
-.status-chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 8px;
-  border-radius: 20px;
-  font-size: 11px; font-weight: 600;
-}
-.chip-ok { background: rgba(34,197,94,0.1); color: var(--success); }
-.chip-off { background: rgba(255,255,255,0.05); color: var(--t3); }
-.chip-live { background: rgba(59,130,246,0.1); color: var(--accent); }
-
-/* Toast */
-.toast-wrap {
-  position: fixed;
-  bottom: 24px; left: 50%;
-  transform: translateX(-50%);
-  z-index: 99999;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  pointer-events: none;
-}
-
-/* Mobile: hamburger */
-.hamburger { display: none; }
-@media (max-width: 639px) {
-  .hamburger { display: flex; }
-  .header-hint { display: none; }
-}
-
-/* Broadcast notification banner */
+/* Broadcast banner */
 .broadcast-banner {
-  position: absolute;
-  top: 0; left: 0; right: 0;
+  position: absolute; top: 0; left: 0; right: 0;
   background: linear-gradient(135deg, #3b82f6, #6366f1);
-  color: #fff;
-  padding: 10px 16px;
-  display: none;
-  align-items: center;
-  gap: 10px;
-  z-index: 150;
-  cursor: pointer;
+  color: #fff; padding: 10px 16px; display: none;
+  align-items: center; gap: 10px; z-index: 150; cursor: pointer;
   font-size: 13px; font-weight: 600;
 }
 .broadcast-banner.show { display: flex; }
 .broadcast-banner-icon { font-size: 18px; flex-shrink: 0; }
 .broadcast-banner-text { flex: 1; }
 .broadcast-banner-btn {
-  background: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 6px;
-  color: #fff;
-  font-size: 11px; font-weight: 700;
-  padding: 4px 10px;
-  cursor: pointer;
-  flex-shrink: 0;
+  background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px; color: #fff; font-size: 11px; font-weight: 700;
+  padding: 4px 10px; cursor: pointer; flex-shrink: 0;
 }
 
-/* Admin panel geofence coords display */
-.coord-display {
-  font-size: 11px;
-  color: var(--accent);
-  font-family: 'Courier New', monospace;
-  background: rgba(59,130,246,0.08);
-  padding: 6px 10px;
-  border-radius: 6px;
-  margin-top: 6px;
-  word-break: break-all;
+/* Toast */
+.toast-wrap {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  z-index: 99999; display: flex; flex-direction: column;
+  align-items: center; gap: 6px; pointer-events: none;
 }
 
-/* User position on map placed via canvas */
-#userMarker {
-  position: absolute;
-  width: 20px; height: 20px;
-  margin-left: -10px;
-  margin-top: -20px;
-  pointer-events: none;
-  z-index: 50;
-  display: none;
+/* Mobile hamburger */
+.hamburger { display: none; }
+@media (max-width: 639px) {
+  .hamburger { display: flex; }
+  .header-hint { display: none; }
 }
-#userMarker svg { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
-
 </style>
 </head>
 <body>
 
-<!-- Broadcast overlay for all users -->
+<!-- Admin mode stripe at top -->
+<div class="admin-stripe">
+  <span>🔐</span> РЕЖИМ АДМИНИСТРАТОРА
+  <button onclick="adminLogout()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:5px;color:#fff;font-size:10px;font-weight:700;padding:2px 9px;cursor:pointer;font-family:inherit;letter-spacing:0.05em;">ВЫЙТИ</button>
+</div>
+
+<!-- Broadcast overlay -->
 <div id="broadcastOverlay">
   <button class="broadcast-close" onclick="closeBroadcast()">✕</button>
   <img id="broadcastImg" src="" alt="Трансляция">
@@ -802,34 +601,45 @@ aside {
 </div>
 
 <header>
-  <!-- Mobile hamburger -->
   <button class="icon-btn hamburger" id="hamburgerBtn" onclick="toggleSidebar()" title="Этажи">☰</button>
   <span class="logo">FLOORMAP</span>
   <div class="hdiv"></div>
   <input class="building-input" id="buildingName" type="text" placeholder="Название здания..." value="Мой объект">
   <div class="header-right">
     <div class="header-meta" id="headerMeta">x: 0 &ensp; y: 0 &ensp;|&ensp; 100%</div>
-    <button class="icon-btn" id="adminBtn" onclick="openAdmin()" title="Панель администратора">⚙️</button>
+    <!-- Settings button — only visible in admin mode -->
+    <button class="icon-btn" id="settingsBtn" onclick="openSettings()" title="Настройки" style="display:none">⚙️</button>
+    <!-- Admin toggle button -->
+    <button class="icon-btn" id="adminBtn" onclick="handleAdminBtn()" title="Администратор">🔑</button>
   </div>
 </header>
 
 <main>
-  <!-- Mobile sidebar overlay -->
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
   <aside id="sidebar">
     <div class="sidebar-label">Этажи</div>
     <div class="floors-list" id="floorsList"></div>
+
+    <!-- NORMAL user footer -->
     <div class="sidebar-footer">
-      <button class="sbtn" onclick="addFloor()" title="Добавить этаж">＋ Этаж</button>
-      <button class="sbtn sbtn-narrow sbtn-del" onclick="deleteFloor(activeId)" title="Удалить">✕</button>
+      <!-- users can't add/delete floors -->
+      <div style="padding:6px 8px;font-size:11px;color:var(--t3);text-align:center;width:100%;">Только просмотр</div>
+    </div>
+
+    <!-- ADMIN toolbar — shown only in admin mode -->
+    <div class="sidebar-admin-toolbar">
+      <div class="admin-sidebar-chip">⚙ Управление этажами</div>
+      <div style="display:flex;gap:5px;margin-top:4px;">
+        <button class="sbtn sbtn-purple" onclick="addFloor()" style="flex:1">＋ Этаж</button>
+        <button class="sbtn sbtn-narrow" onclick="deleteFloor(activeId)" title="Удалить этаж" style="color:#f87171;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.06);">✕</button>
+      </div>
     </div>
   </aside>
 
   <div class="map-wrap" id="mapWrap">
     <div class="grid-bg" id="gridBg"></div>
 
-    <!-- Broadcast banner -->
     <div class="broadcast-banner" id="broadcastBanner" onclick="openBroadcast()">
       <span class="broadcast-banner-icon">📡</span>
       <span class="broadcast-banner-text">Новое сообщение от администратора</span>
@@ -838,15 +648,14 @@ aside {
 
     <div class="canvas" id="canvas">
       <img id="mapImg" src="" alt="Карта этажа">
-      <!-- User position marker inside canvas transform -->
       <div id="userDot"></div>
     </div>
 
     <div class="upload-zone" id="uploadZone">
-      <div class="upload-card" id="uploadCard" onclick="openPicker()">
+      <div class="upload-card" id="uploadCard" onclick="handleUploadClick()">
         <span class="upload-icon" id="uploadIcon">🗺️</span>
-        <div class="upload-title" id="uploadTitle">Загрузить карту этажа</div>
-        <div class="upload-sub" id="uploadSub">Нажмите или перетащите изображение<br>PNG, JPG, SVG, WebP</div>
+        <div class="upload-title" id="uploadTitle">Карта не загружена</div>
+        <div class="upload-sub" id="uploadSub">Войдите как администратор<br>чтобы загрузить карту этажа</div>
       </div>
     </div>
 
@@ -856,13 +665,19 @@ aside {
       <span class="badge-name" id="badgeName">—</span>
     </div>
 
-    <!-- GPS status badge -->
-    <div class="gps-badge" id="gpsBadge" onclick="toggleGPS()" title="Нажмите для включения/выключения геолокации">
+    <div class="gps-badge" id="gpsBadge" onclick="toggleGPS()" title="GPS">
       <div class="gps-dot" id="gpsDot"></div>
       <span class="gps-label" id="gpsLabel">GPS выкл</span>
     </div>
 
-    <button class="replace-btn" id="replaceBtn" onclick="openPicker()">↑ Заменить карту</button>
+    <!-- Admin map toolbar (visible only in admin mode) -->
+    <div class="admin-map-bar" id="adminMapBar">
+      <span class="admin-map-bar-label">🔐 Режим админа</span>
+      <button class="admin-map-btn" onclick="openPicker()">📤 Загрузить карту</button>
+      <button class="admin-map-btn" id="adminReplaceBtn" onclick="openPicker()" style="display:none">↑ Заменить</button>
+      <button class="admin-map-btn danger" id="adminDeleteMapBtn" onclick="deleteCurrentMap()" style="display:none">✕ Удалить карту</button>
+    </div>
+
     <button class="fit-btn" id="fitBtn" onclick="fitToScreen()">⊡ По размеру</button>
 
     <div class="zoom-controls">
@@ -876,155 +691,129 @@ aside {
 
 <!-- Context menu -->
 <div class="ctx-menu" id="ctxMenu">
-  <div class="ctx-item" id="ctxRename">✏️ &nbsp;Переименовать</div>
-  <div class="ctx-item" id="ctxUpload">⬆️ &nbsp;Загрузить карту</div>
+  <div class="ctx-item admin-only" id="ctxRename">✏️ &nbsp;Переименовать</div>
+  <div class="ctx-item admin-only" id="ctxUpload">📤 &nbsp;Загрузить карту</div>
   <div class="ctx-item" id="ctxFit">⊡ &nbsp;По размеру экрана</div>
-  <div class="ctx-divider"></div>
-  <div class="ctx-item danger" id="ctxDelete">✕ &nbsp;Удалить этаж</div>
+  <div class="ctx-divider admin-only"></div>
+  <div class="ctx-item danger admin-only" id="ctxDelete">✕ &nbsp;Удалить этаж</div>
 </div>
 
 <input type="file" id="filePicker" accept="image/*" style="display:none">
 
-<!-- Admin panel overlay -->
-<div class="admin-overlay" id="adminOverlay" onclick="handleAdminOverlayClick(event)">
-  <div class="admin-panel" id="adminPanel">
+<!-- LOGIN MODAL -->
+<div class="login-overlay" id="loginOverlay" onclick="handleLoginOverlayClick(event)">
+  <div class="login-box">
+    <div class="login-icon">🔐</div>
+    <div class="login-title">Вход администратора</div>
+    <div class="login-sub">Введите пароль для перехода<br>в режим редактирования</div>
+    <input type="password" class="login-input" id="loginInput"
+      placeholder="••••••••"
+      onkeydown="if(event.key==='Enter') doLogin()">
+    <div class="login-error" id="loginError">❌ Неверный пароль</div>
+    <button class="login-btn" onclick="doLogin()">Войти в режим администратора</button>
+    <button class="login-cancel" onclick="closeLogin()">Отмена</button>
+  </div>
+</div>
 
-    <!-- Login screen -->
-    <div id="adminLoginView">
-      <div class="admin-header">
-        <span class="admin-title">Панель администратора</span>
-        <button class="admin-close" onclick="closeAdmin()">✕</button>
-      </div>
-      <div class="admin-login">
-        <div class="admin-login-icon">🔐</div>
-        <div class="admin-login-title">Вход в панель управления</div>
-        <div class="admin-login-sub">Введите пароль администратора<br>для доступа к настройкам</div>
-        <input type="password" class="form-input" id="adminPasswordInput"
-          placeholder="Пароль..." style="text-align:center; font-size:16px; letter-spacing:0.2em; width:100%"
-          onkeydown="if(event.key==='Enter') tryAdminLogin()">
-        <div class="admin-login-error" id="adminLoginError">❌ Неверный пароль</div>
-        <button class="admin-btn" onclick="tryAdminLogin()">Войти</button>
-      </div>
+<!-- SETTINGS MODAL (admin only) -->
+<div class="settings-overlay" id="settingsOverlay" onclick="handleSettingsOverlayClick(event)">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <span style="font-size:16px;">⚙️</span>
+      <span class="settings-title">Настройки администратора</span>
+      <button class="settings-close" onclick="closeSettings()">✕</button>
     </div>
+    <div class="settings-body">
 
-    <!-- Main admin view (hidden until login) -->
-    <div id="adminMainView" style="display:none">
-      <div class="admin-header">
-        <span style="font-size:16px;">⚙️</span>
-        <span class="admin-title">Панель администратора</span>
-        <button class="admin-close" onclick="closeAdmin()">✕</button>
+      <!-- Change password -->
+      <div class="settings-section">
+        <div class="settings-section-title">🔑 Смена пароля</div>
+        <div class="form-row">
+          <label class="form-label">Новый пароль (минимум 4 символа)</label>
+          <input type="password" class="form-input" id="newPasswordInput" placeholder="Новый пароль...">
+        </div>
+        <button class="set-btn secondary" onclick="changeAdminPassword()">Сменить пароль</button>
       </div>
-      <div class="admin-body">
 
-        <!-- Section: Password -->
-        <div class="admin-section">
-          <div class="admin-section-title">🔑 Смена пароля</div>
-          <div class="form-row">
-            <label class="form-label">Новый пароль</label>
-            <input type="password" class="form-input" id="newPasswordInput" placeholder="Новый пароль...">
-          </div>
-          <button class="admin-btn secondary" onclick="changeAdminPassword()">Сменить пароль</button>
+      <!-- Broadcast -->
+      <div class="settings-section">
+        <div class="settings-section-title">📡 Трансляция объявления</div>
+        <p class="form-hint">Картинка появится поверх карты у всех пользователей на этом устройстве.</p>
+        <div class="form-row" style="margin-top:10px;">
+          <input type="file" id="broadcastPicker" accept="image/*" style="display:none" onchange="handleBroadcastFile(event)">
+          <button class="set-btn secondary" onclick="document.getElementById('broadcastPicker').click()">📤 Выбрать изображение</button>
         </div>
-
-        <!-- Section: Floor map images (admin-only) -->
-        <div class="admin-section">
-          <div class="admin-section-title">🗺️ Карты этажей</div>
-          <p class="form-hint">Загрузка и замена изображений карт доступна только администратору. Пользователи могут только просматривать карты.</p>
-          <div class="form-row" style="margin-top:10px;">
-            <label class="form-label">Этаж</label>
-            <select class="form-input" id="floorMapSelect" onchange="onFloorMapSelectChange()"></select>
-          </div>
-          <div class="broadcast-preview-wrap" id="floorMapPreviewWrap">
-            <img class="broadcast-preview-img" id="floorMapPreviewImg" src="" alt="">
-            <span class="broadcast-preview-label" id="floorMapPreviewLabel">Текущая карта</span>
-          </div>
-          <div class="form-row" style="margin-top:10px;">
-            <input type="file" id="floorMapPicker" accept="image/*" style="display:none" onchange="handleFloorMapFile(event)">
-            <button class="admin-btn secondary" onclick="document.getElementById('floorMapPicker').click()">
-              📤 Загрузить / заменить карту этажа
-            </button>
-          </div>
-          <button class="admin-btn danger" onclick="clearFloorMap()" style="margin-top:6px;">✕ Удалить карту этажа</button>
-          <div id="floorMapStatus" style="margin-top:8px; font-size:11px; color:var(--t3);"></div>
+        <div class="form-row">
+          <label class="form-label">Подпись (необязательно)</label>
+          <input type="text" class="form-input" id="broadcastCaption" placeholder="Важное объявление...">
         </div>
-
-        <!-- Section: Broadcast -->
-        <div class="admin-section">
-          <div class="admin-section-title">📡 Трансляция изображения</div>
-          <p class="form-hint">Загрузите картинку — она появится у всех посетителей сайта поверх карты.</p>
-          <div class="form-row" style="margin-top:10px;">
-            <label class="form-label">Изображение для трансляции</label>
-            <input type="file" id="broadcastPicker" accept="image/*" style="display:none" onchange="handleBroadcastFile(event)">
-            <button class="admin-btn secondary" onclick="document.getElementById('broadcastPicker').click()">
-              📤 Выбрать изображение
-            </button>
-          </div>
-          <div class="form-row">
-            <label class="form-label">Подпись (необязательно)</label>
-            <input type="text" class="form-input" id="broadcastCaption" placeholder="Важное объявление...">
-          </div>
-          <div class="broadcast-preview-wrap" id="broadcastPreviewWrap">
-            <img class="broadcast-preview-img" id="broadcastPreviewImg" src="" alt="">
-            <span class="broadcast-preview-label">Предпросмотр</span>
-          </div>
-          <button class="admin-btn" onclick="sendBroadcast()" style="margin-top:10px;">📡 Отправить всем</button>
-          <button class="admin-btn danger" onclick="clearBroadcast()" style="margin-top:6px;">✕ Убрать трансляцию</button>
-          <div id="broadcastStatus" style="margin-top:8px; font-size:11px; color:var(--t3);"></div>
+        <div class="broadcast-preview-wrap" id="broadcastPreviewWrap">
+          <img class="broadcast-preview-img" id="broadcastPreviewImg" src="" alt="">
+          <span class="broadcast-preview-label">Предпросмотр</span>
         </div>
-
-        <!-- Section: Geofence — Building location -->
-        <div class="admin-section">
-          <div class="admin-section-title">📍 Геозона здания</div>
-          <p class="form-hint">Карта начнёт работу только когда пользователь находится в зоне здания. Укажите координаты центра и радиус зоны.</p>
-          <div class="form-row-2" style="margin-top:10px;">
-            <div class="form-row">
-              <label class="form-label">Широта (lat)</label>
-              <input type="number" class="form-input" id="geoLat" placeholder="41.2995" step="0.0001">
-            </div>
-            <div class="form-row">
-              <label class="form-label">Долгота (lon)</label>
-              <input type="number" class="form-input" id="geoLon" placeholder="69.2401" step="0.0001">
-            </div>
-          </div>
-          <div class="form-row">
-            <label class="form-label">Радиус зоны (метры)</label>
-            <input type="number" class="form-input" id="geoRadius" placeholder="50" min="5" max="500">
-          </div>
-          <button class="admin-btn secondary" onclick="captureCurrentGPS()">📍 Использовать текущее местоположение</button>
-          <div class="coord-display" id="geoCurrentDisplay" style="display:none"></div>
-          <button class="admin-btn" onclick="saveGeofence()" style="margin-top:8px;">💾 Сохранить геозону</button>
-          <div id="geofenceStatus" style="margin-top:8px;font-size:11px;color:var(--t3);"></div>
-        </div>
-
-        <!-- Section: Floor geofence (auto floor detection) -->
-        <div class="admin-section">
-          <div class="admin-section-title">🏢 Автоопределение этажа (высота)</div>
-          <p class="form-hint">Укажите высоту каждого этажа в метрах над землёй. Браузер определит этаж по данным барометра (если поддерживается).</p>
-          <div class="floor-geo-list" id="floorGeoList"></div>
-          <button class="admin-btn secondary" onclick="renderFloorGeoList()" style="margin-top:8px;">🔄 Обновить список</button>
-          <button class="admin-btn" onclick="saveFloorHeights()" style="margin-top:6px;">💾 Сохранить высоты</button>
-          <div id="altStatus" style="margin-top:8px;font-size:11px;color:var(--t3);"></div>
-        </div>
-
-        <!-- Section: User position on map -->
-        <div class="admin-section">
-          <div class="admin-section-title">🎯 Позиция пользователя на карте</div>
-          <p class="form-hint">Задайте начальную позицию красной метки для каждого этажа (в пикселях изображения карты).</p>
-          <div id="userPosSection">
-            <p class="form-hint" style="color:var(--t3); margin-top:6px;">Выберите этаж на карте, затем нажмите кнопку — появится метка, которую можно перетаскивать.</p>
-            <button class="admin-btn secondary" onclick="enablePositionEdit()" style="margin-top:8px;">✏️ Редактировать позицию</button>
-            <button class="admin-btn secondary" onclick="disablePositionEdit()" style="margin-top:6px; display:none" id="stopEditPosBtn">✅ Готово</button>
-          </div>
-        </div>
-
-        <!-- Section: Admin log out -->
-        <div>
-          <button class="admin-btn danger" onclick="adminLogout()">Выйти из панели</button>
-        </div>
-
+        <button class="set-btn" onclick="sendBroadcast()" style="margin-top:10px;">📡 Показать всем</button>
+        <button class="set-btn danger" onclick="clearBroadcast()" style="margin-top:6px;">✕ Убрать трансляцию</button>
+        <div id="broadcastStatus" style="margin-top:8px;font-size:11px;color:var(--t3);"></div>
       </div>
+
+      <!-- Geofence -->
+      <div class="settings-section">
+        <div class="settings-section-title">📍 Геозона здания</div>
+        <p class="form-hint">Карта активируется только когда пользователь находится рядом со зданием.</p>
+        <div class="form-row-2" style="margin-top:10px;">
+          <div class="form-row">
+            <label class="form-label">Широта (lat)</label>
+            <input type="number" class="form-input" id="geoLat" placeholder="41.2995" step="0.0001">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Долгота (lon)</label>
+            <input type="number" class="form-input" id="geoLon" placeholder="69.2401" step="0.0001">
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Радиус (метры)</label>
+          <input type="number" class="form-input" id="geoRadius" placeholder="50" min="5" max="500">
+        </div>
+        <button class="set-btn secondary" onclick="captureCurrentGPS()">📍 Использовать моё местоположение</button>
+        <div class="coord-display" id="geoCurrentDisplay" style="display:none"></div>
+        <button class="set-btn" onclick="saveGeofence()" style="margin-top:8px;">💾 Сохранить геозону</button>
+        <div id="geofenceStatus" style="margin-top:8px;font-size:11px;color:var(--t3);"></div>
+      </div>
+
+      <!-- Floor heights -->
+      <div class="settings-section">
+        <div class="settings-section-title">🏢 Автоопределение этажа</div>
+        <p class="form-hint">Укажите высоту каждого этажа над землёй для автоматического определения по GPS.</p>
+        <div class="floor-geo-list" id="floorGeoList"></div>
+        <button class="set-btn secondary" onclick="renderFloorGeoList()" style="margin-top:8px;">🔄 Обновить</button>
+        <button class="set-btn" onclick="saveFloorHeights()" style="margin-top:6px;">💾 Сохранить высоты</button>
+        <div id="altStatus" style="margin-top:8px;font-size:11px;color:var(--t3);"></div>
+      </div>
+
+      <!-- User position -->
+      <div class="settings-section">
+        <div class="settings-section-title">🎯 Позиция пользователя</div>
+        <p class="form-hint">Перетащите красную метку на карте чтобы установить начальную позицию.</p>
+        <button class="set-btn secondary" onclick="enablePositionEdit();closeSettings();" style="margin-top:8px;">✏️ Редактировать позицию</button>
+        <button class="set-btn secondary" onclick="disablePositionEdit()" style="margin-top:6px;display:none" id="stopEditPosBtn">✅ Сохранить позицию</button>
+      </div>
+
+      <!-- Export/Import -->
+      <div class="settings-section">
+        <div class="settings-section-title">💾 Экспорт / Импорт данных</div>
+        <p class="form-hint">Сохраните все карты и настройки в JSON-файл, чтобы отправить другому устройству или загрузить на GitHub.</p>
+        <button class="set-btn secondary" onclick="exportData()" style="margin-top:8px;">⬇️ Экспортировать данные (JSON)</button>
+        <div class="form-row" style="margin-top:8px;">
+          <input type="file" id="importPicker" accept=".json" style="display:none" onchange="importData(event)">
+          <button class="set-btn secondary" onclick="document.getElementById('importPicker').click()">⬆️ Импортировать данные (JSON)</button>
+        </div>
+        <div id="exportStatus" style="margin-top:8px;font-size:11px;color:var(--t3);"></div>
+      </div>
+
+      <!-- Logout -->
+      <button class="set-btn danger" onclick="adminLogout()">🔓 Выйти из режима администратора</button>
+
     </div>
-
   </div>
 </div>
 
@@ -1048,6 +837,7 @@ let ctxTargetId = null;
 
 // Admin
 const ADMIN_PW_KEY = 'fm_admin_pw';
+const ADMIN_SESSION_COOKIE = 'fm_admin_session';
 const DEFAULT_PW = 'admin123';
 let isAdminLoggedIn = false;
 
@@ -1056,10 +846,10 @@ let geofence = { lat: null, lon: null, radius: 50, enabled: false };
 let gpsActive = false;
 let gpsWatchId = null;
 let insideGeofence = false;
-let userFloorId = null; // floor detected by altitude
+let userFloorId = null;
 
 // Broadcast
-let currentBroadcastData = null; // {img, caption}
+let currentBroadcastData = null;
 
 // Position editing
 let posEditMode = false;
@@ -1074,12 +864,8 @@ const canvas     = document.getElementById('canvas');
 const mapImg     = document.getElementById('mapImg');
 const uploadZone = document.getElementById('uploadZone');
 const uploadCard = document.getElementById('uploadCard');
-const uploadIcon = document.getElementById('uploadIcon');
-const uploadTitle= document.getElementById('uploadTitle');
-const uploadSub  = document.getElementById('uploadSub');
 const floorsList = document.getElementById('floorsList');
 const badgeName  = document.getElementById('badgeName');
-const replaceBtn = document.getElementById('replaceBtn');
 const fitBtn     = document.getElementById('fitBtn');
 const gridBg     = document.getElementById('gridBg');
 const zpct       = document.getElementById('zpct');
@@ -1094,12 +880,30 @@ const sidebar    = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 
 // ═══════════════════════════════════════════════════
+//  COOKIE HELPERS
+// ═══════════════════════════════════════════════════
+function setCookie(name, value, days) {
+  const d = new Date();
+  d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+  document.cookie = `${name}=${encodeURIComponent(value)};expires=${d.toUTCString()};path=/;SameSite=Lax`;
+}
+
+function getCookie(name) {
+  const match = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith(name + '='));
+  return match ? decodeURIComponent(match.split('=')[1]) : null;
+}
+
+function deleteCookie(name) {
+  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Lax`;
+}
+
+// ═══════════════════════════════════════════════════
 //  STORAGE HELPERS
 // ═══════════════════════════════════════════════════
 function saveToStorage() {
   try {
     const data = {
-      floors: floors.map(f => ({ ...f, img: f.img })),
+      floors: floors.map(f => ({ ...f })),
       geofence,
       broadcastData: currentBroadcastData,
       buildingName: document.getElementById('buildingName').value
@@ -1117,7 +921,6 @@ function loadFromStorage() {
     if (data.geofence) geofence = data.geofence;
     if (data.broadcastData) {
       currentBroadcastData = data.broadcastData;
-      // Show broadcast banner to all (simulate shared data)
       showBroadcastBanner();
     }
     if (data.buildingName) document.getElementById('buildingName').value = data.buildingName;
@@ -1125,57 +928,71 @@ function loadFromStorage() {
 }
 
 // ═══════════════════════════════════════════════════
-//  ADMIN
+//  ADMIN MODE
 // ═══════════════════════════════════════════════════
 function getAdminPw() {
   return localStorage.getItem(ADMIN_PW_KEY) || DEFAULT_PW;
 }
 
-function openAdmin() {
-  document.getElementById('adminOverlay').classList.add('show');
+function handleAdminBtn() {
   if (isAdminLoggedIn) {
-    showAdminMain();
+    // Already in admin mode — clicking the key button opens settings
+    openSettings();
   } else {
-    showAdminLogin();
+    openLogin();
   }
-  document.getElementById('adminPasswordInput').focus && setTimeout(() => document.getElementById('adminPasswordInput').focus(), 100);
 }
 
-function closeAdmin() {
-  document.getElementById('adminOverlay').classList.remove('show');
+function openLogin() {
+  document.getElementById('loginOverlay').classList.add('show');
+  document.getElementById('loginError').style.display = 'none';
+  document.getElementById('loginInput').value = '';
+  setTimeout(() => document.getElementById('loginInput').focus(), 120);
 }
 
-function handleAdminOverlayClick(e) {
-  if (e.target === document.getElementById('adminOverlay')) closeAdmin();
+function closeLogin() {
+  document.getElementById('loginOverlay').classList.remove('show');
 }
 
-function showAdminLogin() {
-  document.getElementById('adminLoginView').style.display = '';
-  document.getElementById('adminMainView').style.display = 'none';
-  document.getElementById('adminLoginError').style.display = 'none';
-  document.getElementById('adminPasswordInput').value = '';
+function handleLoginOverlayClick(e) {
+  if (e.target === document.getElementById('loginOverlay')) closeLogin();
 }
 
-function showAdminMain() {
-  document.getElementById('adminLoginView').style.display = 'none';
-  document.getElementById('adminMainView').style.display = '';
-  renderFloorGeoList();
-  loadGeofenceToAdmin();
-  renderFloorMapSelect();
-}
-
-function tryAdminLogin() {
-  const val = document.getElementById('adminPasswordInput').value;
+function doLogin() {
+  const val = document.getElementById('loginInput').value;
   if (val === getAdminPw()) {
     isAdminLoggedIn = true;
-    document.getElementById('adminLoginError').style.display = 'none';
-    showAdminMain();
-    updateMapDisplay(false);
+    // Save session in cookie (7 days)
+    setCookie(ADMIN_SESSION_COOKIE, 'active', 7);
+    closeLogin();
+    enterAdminMode();
   } else {
-    document.getElementById('adminLoginError').style.display = 'block';
-    document.getElementById('adminPasswordInput').value = '';
-    document.getElementById('adminPasswordInput').focus();
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('loginInput').value = '';
+    document.getElementById('loginInput').focus();
   }
+}
+
+function enterAdminMode() {
+  document.body.classList.add('admin-mode');
+  document.getElementById('settingsBtn').style.display = '';
+  isAdminLoggedIn = true;
+  render();
+  updateMapDisplay(false);
+  showToast('✅ Режим администратора включён', 'ok');
+}
+
+function adminLogout() {
+  isAdminLoggedIn = false;
+  deleteCookie(ADMIN_SESSION_COOKIE);
+  document.body.classList.remove('admin-mode');
+  document.getElementById('settingsBtn').style.display = 'none';
+  closeSettings();
+  // Disable position edit if active
+  if (posEditMode) disablePositionEdit();
+  render();
+  updateMapDisplay(false);
+  showToast('🔓 Вы вышли из режима администратора');
 }
 
 function changeAdminPassword() {
@@ -1186,11 +1003,131 @@ function changeAdminPassword() {
   showToast('✅ Пароль успешно изменён');
 }
 
-function adminLogout() {
-  isAdminLoggedIn = false;
-  closeAdmin();
+// ═══════════════════════════════════════════════════
+//  SETTINGS MODAL
+// ═══════════════════════════════════════════════════
+function openSettings() {
+  if (!isAdminLoggedIn) return;
+  document.getElementById('settingsOverlay').classList.add('show');
+  renderFloorGeoList();
+  loadGeofenceToSettings();
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('show');
+}
+
+function handleSettingsOverlayClick(e) {
+  if (e.target === document.getElementById('settingsOverlay')) closeSettings();
+}
+
+// ═══════════════════════════════════════════════════
+//  FILE UPLOAD (admin only)
+// ═══════════════════════════════════════════════════
+function handleUploadClick() {
+  if (isAdminLoggedIn) {
+    openPicker();
+  } else {
+    showToast('🔒 Войдите как администратор чтобы загружать карты');
+    openLogin();
+  }
+}
+
+function openPicker() {
+  if (!isAdminLoggedIn) { showToast('🔒 Только администратор может загружать карты'); return; }
+  filePicker.value = '';
+  filePicker.click();
+}
+
+filePicker.onchange = e => {
+  const file = e.target.files[0];
+  if (file) loadImageFile(file);
+};
+
+function loadImageFile(file) {
+  if (!isAdminLoggedIn) { showToast('🔒 Нет доступа'); return; }
+  if (!file.type.startsWith('image/')) { showToast('Пожалуйста, выберите изображение'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const f = getFloor(activeId);
+    if (f) {
+      f.img = ev.target.result;
+      render();
+      updateMapDisplay(false);
+      fitToScreen();
+      saveToStorage();
+      showToast('✅ Карта этажа загружена');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function deleteCurrentMap() {
+  if (!isAdminLoggedIn) return;
+  const f = getFloor(activeId);
+  if (!f || !f.img) { showToast('У этого этажа нет карты'); return; }
+  f.img = null;
+  render();
   updateMapDisplay(false);
-  showToast('Вы вышли из панели администратора');
+  saveToStorage();
+  showToast('Карта удалена');
+}
+
+['dragover','dragleave','drop'].forEach(type => {
+  uploadCard.addEventListener(type, e => {
+    e.preventDefault(); e.stopPropagation();
+    if (!isAdminLoggedIn) return;
+    uploadCard.classList.toggle('dragover', type === 'dragover');
+    if (type === 'drop' && e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
+  });
+});
+mapWrap.addEventListener('dragover', e => e.preventDefault());
+mapWrap.addEventListener('drop', e => {
+  e.preventDefault();
+  if (isAdminLoggedIn && e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
+});
+
+// ═══════════════════════════════════════════════════
+//  EXPORT / IMPORT (for GitHub Pages workflow)
+// ═══════════════════════════════════════════════════
+function exportData() {
+  const data = {
+    floors: floors.map(f => ({ ...f })),
+    geofence,
+    buildingName: document.getElementById('buildingName').value,
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'floormap-data.json'; a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('exportStatus').textContent = '✅ Файл floormap-data.json скачан';
+  showToast('✅ Данные экспортированы');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.floors && data.floors.length > 0) floors = data.floors;
+      if (data.geofence) geofence = data.geofence;
+      if (data.buildingName) document.getElementById('buildingName').value = data.buildingName;
+      uid = Math.max(...floors.map(f => f.id)) + 1;
+      activeId = floors[0].id;
+      saveToStorage();
+      render();
+      updateMapDisplay(true);
+      document.getElementById('exportStatus').textContent = '✅ Данные импортированы успешно';
+      showToast('✅ Данные загружены из файла');
+    } catch(e) {
+      showToast('❌ Ошибка чтения файла', 'error');
+    }
+  };
+  reader.readAsText(file);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1216,9 +1153,8 @@ function sendBroadcast() {
   currentBroadcastData = { img: pendingBroadcastFile, caption };
   saveToStorage();
   showBroadcastBanner();
-  document.getElementById('broadcastStatus').textContent = '✅ Изображение отправлено всем пользователям';
+  document.getElementById('broadcastStatus').textContent = '✅ Трансляция активна';
   showToast('📡 Трансляция запущена');
-  // Simulate real-time: show to self
   openBroadcast();
 }
 
@@ -1249,93 +1185,7 @@ function openBroadcast() {
 
 function closeBroadcast() {
   document.getElementById('broadcastOverlay').classList.remove('show');
-  if (currentBroadcastData) {
-    document.getElementById('broadcastBanner').classList.add('show');
-  }
-}
-
-// ═══════════════════════════════════════════════════
-//  FLOOR MAP IMAGES (admin-only — пользователь не может менять)
-// ═══════════════════════════════════════════════════
-let pendingFloorMapFile = null;
-let floorMapSelectedId = null;
-
-function renderFloorMapSelect() {
-  const sel = document.getElementById('floorMapSelect');
-  if (!sel) return;
-  const prev = floorMapSelectedId;
-  sel.innerHTML = '';
-  floors.forEach((f, i) => {
-    const opt = document.createElement('option');
-    opt.value = f.id;
-    opt.textContent = `${i+1}. ${f.name}${f.img ? '' : ' (нет карты)'}`;
-    sel.appendChild(opt);
-  });
-  // Preserve previous selection if still exists, otherwise default to active floor
-  const keep = floors.find(f => f.id === prev) ? prev : activeId;
-  floorMapSelectedId = keep;
-  sel.value = keep;
-  updateFloorMapPreview();
-}
-
-function onFloorMapSelectChange() {
-  const sel = document.getElementById('floorMapSelect');
-  floorMapSelectedId = parseInt(sel.value, 10);
-  pendingFloorMapFile = null;
-  updateFloorMapPreview();
-}
-
-function updateFloorMapPreview() {
-  const f = getFloor(floorMapSelectedId);
-  const wrap = document.getElementById('floorMapPreviewWrap');
-  const img  = document.getElementById('floorMapPreviewImg');
-  const lbl  = document.getElementById('floorMapPreviewLabel');
-  if (f && f.img) {
-    img.src = f.img;
-    lbl.textContent = 'Текущая карта';
-    wrap.classList.add('show');
-  } else {
-    img.src = '';
-    wrap.classList.remove('show');
-  }
-  document.getElementById('floorMapStatus').textContent = f
-    ? (f.img ? `Карта загружена для «${f.name}»` : `Для «${f.name}» карта не загружена`)
-    : '';
-}
-
-function handleFloorMapFile(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (!file.type.startsWith('image/')) { showToast('Пожалуйста, выберите изображение'); return; }
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const f = getFloor(floorMapSelectedId);
-    if (!f) return;
-    f.img = ev.target.result;
-    saveToStorage();
-    renderFloorMapSelect();
-    render(); // refresh sidebar thumbnails
-    if (activeId === f.id) {
-      updateMapDisplay(true);
-      fitToScreen();
-    }
-    document.getElementById('floorMapStatus').textContent = `✅ Карта для «${f.name}» обновлена`;
-    showToast(`✅ Карта этажа «${f.name}» обновлена`);
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearFloorMap() {
-  const f = getFloor(floorMapSelectedId);
-  if (!f) return;
-  if (!f.img) { showToast('У этого этажа нет карты'); return; }
-  f.img = null;
-  saveToStorage();
-  renderFloorMapSelect();
-  render();
-  if (activeId === f.id) updateMapDisplay(true);
-  document.getElementById('floorMapStatus').textContent = `Карта для «${f.name}» удалена`;
-  showToast(`Карта этажа «${f.name}» удалена`);
+  if (currentBroadcastData) document.getElementById('broadcastBanner').classList.add('show');
 }
 
 // ═══════════════════════════════════════════════════
@@ -1348,11 +1198,11 @@ function saveGeofence() {
   if (isNaN(lat) || isNaN(lon)) { showToast('Укажите корректные координаты'); return; }
   geofence = { lat, lon, radius, enabled: true };
   saveToStorage();
-  document.getElementById('geofenceStatus').textContent = `✅ Геозона сохранена: (${lat.toFixed(5)}, ${lon.toFixed(5)}), R=${radius}м`;
+  document.getElementById('geofenceStatus').textContent = `✅ Геозона: (${lat.toFixed(5)}, ${lon.toFixed(5)}), R=${radius}м`;
   showToast('✅ Геозона сохранена');
 }
 
-function loadGeofenceToAdmin() {
+function loadGeofenceToSettings() {
   if (geofence.lat !== null) {
     document.getElementById('geoLat').value = geofence.lat;
     document.getElementById('geoLon').value = geofence.lon;
@@ -1364,54 +1214,39 @@ function captureCurrentGPS() {
   if (!navigator.geolocation) { showToast('Геолокация не поддерживается'); return; }
   showToast('Определяем местоположение...');
   navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
+    const lat = pos.coords.latitude, lon = pos.coords.longitude;
     document.getElementById('geoLat').value = lat.toFixed(6);
     document.getElementById('geoLon').value = lon.toFixed(6);
     const disp = document.getElementById('geoCurrentDisplay');
     disp.style.display = 'block';
-    disp.textContent = `📍 ${lat.toFixed(6)}, ${lon.toFixed(6)} — Точность: ±${Math.round(pos.coords.accuracy)}м`;
-    showToast(`✅ Координаты захвачены`);
-  }, err => {
-    showToast('Ошибка GPS: ' + err.message);
-  }, { enableHighAccuracy: true });
+    disp.textContent = `📍 ${lat.toFixed(6)}, ${lon.toFixed(6)} — ±${Math.round(pos.coords.accuracy)}м`;
+    showToast('✅ Координаты захвачены');
+  }, err => showToast('Ошибка GPS: ' + err.message), { enableHighAccuracy: true });
 }
 
 function distanceMeters(lat1, lon1, lat2, lon2) {
   const R = 6371000;
-  const dLat = (lat2-lat1)*Math.PI/180;
-  const dLon = (lon2-lon1)*Math.PI/180;
+  const dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
   const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-function toggleGPS() {
-  if (gpsActive) {
-    stopGPS();
-  } else {
-    startGPS();
-  }
-}
+function toggleGPS() { gpsActive ? stopGPS() : startGPS(); }
 
 function startGPS() {
-  if (!navigator.geolocation) { showToast('Геолокация не поддерживается на этом устройстве'); return; }
+  if (!navigator.geolocation) { showToast('Геолокация не поддерживается'); return; }
   gpsActive = true;
   setGPSUI('searching', 'Поиск...');
   gpsWatchId = navigator.geolocation.watchPosition(onGPSUpdate, onGPSError, {
-    enableHighAccuracy: true,
-    timeout: 15000,
-    maximumAge: 2000
+    enableHighAccuracy: true, timeout: 15000, maximumAge: 2000
   });
 }
 
 function stopGPS() {
   if (gpsWatchId !== null) navigator.geolocation.clearWatch(gpsWatchId);
-  gpsWatchId = null;
-  gpsActive = false;
-  insideGeofence = false;
+  gpsWatchId = null; gpsActive = false; insideGeofence = false;
   setGPSUI('off', 'GPS выкл');
-  userDot.style.display = 'none';
-  render(); // clear user-here marker
+  userDot.style.display = 'none'; render();
 }
 
 function setGPSUI(state, label) {
@@ -1421,61 +1256,38 @@ function setGPSUI(state, label) {
 
 function onGPSUpdate(pos) {
   setGPSUI('active', `±${Math.round(pos.coords.accuracy)}м`);
-
-  // Check geofence
   if (geofence.enabled && geofence.lat !== null) {
     const dist = distanceMeters(pos.coords.latitude, pos.coords.longitude, geofence.lat, geofence.lon);
-    const wasInside = insideGeofence;
+    const was = insideGeofence;
     insideGeofence = dist <= geofence.radius;
-    if (!wasInside && insideGeofence) showToast('📍 Вы вошли в зону здания');
-    if (wasInside && !insideGeofence) showToast('📍 Вы покинули зону здания');
-  } else {
-    insideGeofence = true; // No geofence set — always active
-  }
+    if (!was && insideGeofence) showToast('📍 Вы вошли в зону здания');
+    if (was && !insideGeofence) showToast('📍 Вы покинули зону здания');
+  } else { insideGeofence = true; }
 
-  // Auto floor detection by altitude
   if (pos.coords.altitude !== null && pos.coords.altitude !== undefined) {
     const alt = pos.coords.altitude;
-    const detectedFloor = floors.find(f => f.altEnabled && alt >= f.altMin && alt < f.altMax);
-    if (detectedFloor && detectedFloor.id !== userFloorId) {
-      userFloorId = detectedFloor.id;
-      switchFloor(detectedFloor.id);
-      showToast(`🏢 Автоопределение: ${detectedFloor.name}`);
+    const det = floors.find(f => f.altEnabled && alt >= f.altMin && alt < f.altMax);
+    if (det && det.id !== userFloorId) {
+      userFloorId = det.id; switchFloor(det.id);
+      showToast(`🏢 Автоопределение: ${det.name}`);
     }
   }
-
-  // Update user position on map if inside geofence
-  if (insideGeofence) {
-    showUserOnMap();
-  } else {
-    userDot.style.display = 'none';
-  }
-
-  render(); // update floor list indicators
+  if (insideGeofence) showUserOnMap(); else userDot.style.display = 'none';
+  render();
 }
 
 function onGPSError(err) {
   setGPSUI('error', 'Ошибка GPS');
-  if (err.code === 1) showToast('❌ Доступ к GPS запрещён. Разрешите геолокацию в браузере.');
-  else showToast('❌ Ошибка GPS: ' + err.message);
+  showToast(err.code === 1 ? '❌ Доступ к GPS запрещён' : '❌ Ошибка GPS: ' + err.message);
 }
 
 function showUserOnMap() {
   const f = getFloor(activeId);
-  if (!f || !f.img) return;
-
-  // Use saved user position or default to center
+  if (!f || !f.img || !mapImg.naturalWidth) return;
   const pos = f.userPos || { x: 0.5, y: 0.5 };
-
-  // Convert fractional pos to pixel pos in image
-  // We need image natural size
-  if (!mapImg.naturalWidth) return;
-  const px = pos.x * mapImg.naturalWidth;
-  const py = pos.y * mapImg.naturalHeight;
-
   userDot.style.display = 'block';
-  userDot.style.left = px + 'px';
-  userDot.style.top  = py + 'px';
+  userDot.style.left = pos.x * mapImg.naturalWidth + 'px';
+  userDot.style.top  = pos.y * mapImg.naturalHeight + 'px';
 }
 
 // ═══════════════════════════════════════════════════
@@ -1491,40 +1303,33 @@ function renderFloorGeoList() {
       <div class="floor-geo-item-header">
         <div class="floor-geo-num">${i+1}</div>
         <div class="floor-geo-name">${esc(f.name)}</div>
-        <button class="floor-geo-toggle ${f.altEnabled ? 'on' : ''}" 
-          onclick="toggleFloorAlt(${f.id})" data-fid="${f.id}"></button>
+        <button class="floor-geo-toggle ${f.altEnabled ? 'on' : ''}" onclick="toggleFloorAlt(${f.id})"></button>
       </div>
       <div class="form-row-2">
         <div class="form-row">
           <label class="form-label" style="font-size:10px">Высота от (м)</label>
-          <input type="number" class="form-input" style="padding:5px 8px;font-size:11px"
-            id="altMin_${f.id}" value="${f.altMin || 0}" step="0.5">
+          <input type="number" class="form-input" style="padding:5px 8px;font-size:11px" id="altMin_${f.id}" value="${f.altMin||0}" step="0.5">
         </div>
         <div class="form-row">
           <label class="form-label" style="font-size:10px">Высота до (м)</label>
-          <input type="number" class="form-input" style="padding:5px 8px;font-size:11px"
-            id="altMax_${f.id}" value="${f.altMax || 4}" step="0.5">
+          <input type="number" class="form-input" style="padding:5px 8px;font-size:11px" id="altMax_${f.id}" value="${f.altMax||4}" step="0.5">
         </div>
-      </div>
-    `;
+      </div>`;
     list.appendChild(item);
   });
   checkAltimeterSupport();
 }
 
 function toggleFloorAlt(id) {
-  const f = getFloor(id);
-  if (!f) return;
-  f.altEnabled = !f.altEnabled;
-  renderFloorGeoList();
+  const f = getFloor(id); if (!f) return;
+  f.altEnabled = !f.altEnabled; renderFloorGeoList();
 }
 
 function saveFloorHeights() {
   floors.forEach(f => {
-    const minEl = document.getElementById(`altMin_${f.id}`);
-    const maxEl = document.getElementById(`altMax_${f.id}`);
-    if (minEl) f.altMin = parseFloat(minEl.value) || 0;
-    if (maxEl) f.altMax = parseFloat(maxEl.value) || 4;
+    const mn = document.getElementById(`altMin_${f.id}`), mx = document.getElementById(`altMax_${f.id}`);
+    if (mn) f.altMin = parseFloat(mn.value)||0;
+    if (mx) f.altMax = parseFloat(mx.value)||4;
   });
   saveToStorage();
   document.getElementById('altStatus').textContent = '✅ Высоты сохранены';
@@ -1532,26 +1337,22 @@ function saveFloorHeights() {
 }
 
 function checkAltimeterSupport() {
-  const statusEl = document.getElementById('altStatus');
-  // Check if DeviceMotionEvent or DeviceOrientationEvent with alpha is available
-  if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
-    statusEl.textContent = '⚠️ На iOS нужно разрешение. Барометр работает только в Safari.';
-  } else if (navigator.geolocation) {
-    statusEl.textContent = 'ℹ️ Высота определяется через GPS (точность зависит от устройства)';
-  } else {
-    statusEl.textContent = '❌ Геолокация не поддерживается';
-  }
+  const s = document.getElementById('altStatus');
+  if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission)
+    s.textContent = '⚠️ iOS: нужно разрешение в Safari';
+  else if (navigator.geolocation)
+    s.textContent = 'ℹ️ Высота через GPS (точность зависит от устройства)';
+  else s.textContent = '❌ Геолокация не поддерживается';
 }
 
 // ═══════════════════════════════════════════════════
 //  USER POSITION EDITING
 // ═══════════════════════════════════════════════════
 function enablePositionEdit() {
+  if (!isAdminLoggedIn) return;
   posEditMode = true;
   document.getElementById('stopEditPosBtn').style.display = '';
-  showToast('Перетащите красную метку на карте для установки позиции');
-
-  // Ensure dot is visible
+  showToast('Перетащите красную метку для установки позиции');
   const f = getFloor(activeId);
   if (f && f.img) {
     if (!f.userPos) f.userPos = { x: 0.5, y: 0.5 };
@@ -1559,10 +1360,7 @@ function enablePositionEdit() {
     userDot.style.display = 'block';
     userDot.style.cursor = 'grab';
     userDot.style.pointerEvents = 'auto';
-  } else {
-    showToast('Сначала загрузите карту этажа');
-    posEditMode = false;
-  }
+  } else { showToast('Сначала загрузите карту этажа'); posEditMode = false; }
 }
 
 function disablePositionEdit() {
@@ -1574,63 +1372,34 @@ function disablePositionEdit() {
   showToast('✅ Позиция сохранена');
 }
 
-// Drag userDot
 userDot.addEventListener('mousedown', e => {
   if (!posEditMode) return;
-  e.stopPropagation();
-  userDotDragging = true;
-  dotDx0 = e.clientX;
-  dotDy0 = e.clientY;
+  e.stopPropagation(); userDotDragging = true;
+  dotDx0 = e.clientX; dotDy0 = e.clientY;
   const f = getFloor(activeId);
-  dotPx0 = (f && f.userPos) ? f.userPos.x : 0.5;
-  dotPy0 = (f && f.userPos) ? f.userPos.y : 0.5;
+  dotPx0 = f?.userPos?.x ?? 0.5; dotPy0 = f?.userPos?.y ?? 0.5;
   userDot.style.cursor = 'grabbing';
 });
 
 userDot.addEventListener('touchstart', e => {
   if (!posEditMode) return;
-  e.stopPropagation();
-  const t = e.touches[0];
-  userDotDragging = true;
-  dotDx0 = t.clientX;
-  dotDy0 = t.clientY;
+  e.stopPropagation(); const t = e.touches[0];
+  userDotDragging = true; dotDx0 = t.clientX; dotDy0 = t.clientY;
   const f = getFloor(activeId);
-  dotPx0 = (f && f.userPos) ? f.userPos.x : 0.5;
-  dotPy0 = (f && f.userPos) ? f.userPos.y : 0.5;
+  dotPx0 = f?.userPos?.x ?? 0.5; dotPy0 = f?.userPos?.y ?? 0.5;
 }, { passive: true });
 
-document.addEventListener('mousemove', e => {
-  if (!userDotDragging) return;
-  moveDot(e.clientX, e.clientY);
-});
-
-document.addEventListener('touchmove', e => {
-  if (!userDotDragging) return;
-  moveDot(e.touches[0].clientX, e.touches[0].clientY);
-}, { passive: true });
-
-document.addEventListener('mouseup', () => {
-  if (userDotDragging) { userDotDragging = false; userDot.style.cursor = 'grab'; }
-});
+document.addEventListener('mousemove', e => { if (userDotDragging) moveDot(e.clientX, e.clientY); });
+document.addEventListener('touchmove', e => { if (userDotDragging) moveDot(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+document.addEventListener('mouseup', () => { if (userDotDragging) { userDotDragging = false; userDot.style.cursor = 'grab'; } });
 document.addEventListener('touchend', () => { userDotDragging = false; });
 
 function moveDot(cx, cy) {
   if (!mapImg.naturalWidth) return;
-  const f = getFloor(activeId);
-  if (!f) return;
-  // delta in screen pixels
-  const ddx = cx - dotDx0;
-  const ddy = cy - dotDy0;
-  // convert to image pixels
-  const dpx = ddx / scale;
-  const dpy = ddy / scale;
-  // new pos as fraction of image
-  const nx = dotPx0 + dpx / mapImg.naturalWidth;
-  const ny = dotPy0 + dpy / mapImg.naturalHeight;
-  f.userPos = {
-    x: Math.max(0, Math.min(1, nx)),
-    y: Math.max(0, Math.min(1, ny))
-  };
+  const f = getFloor(activeId); if (!f) return;
+  const nx = dotPx0 + (cx - dotDx0) / scale / mapImg.naturalWidth;
+  const ny = dotPy0 + (cy - dotDy0) / scale / mapImg.naturalHeight;
+  f.userPos = { x: Math.max(0,Math.min(1,nx)), y: Math.max(0,Math.min(1,ny)) };
   showUserOnMap();
 }
 
@@ -1641,51 +1410,37 @@ function getFloor(id) { return floors.find(f => f.id === id); }
 
 function switchFloor(id) {
   if (id === activeId) return;
-  activeId = id;
-  render();
-  updateMapDisplay(true);
+  activeId = id; render(); updateMapDisplay(true);
   if (gpsActive && insideGeofence) setTimeout(showUserOnMap, 200);
 }
 
 function addFloor() {
+  if (!isAdminLoggedIn) return;
   const n = floors.length + 1;
-  const newFloor = {
-    id: uid++, name: `${n}-й этаж`, img: null,
-    userPos: null, altMin: (n-1)*3, altMax: n*3, altEnabled: false
-  };
-  floors.push(newFloor);
-  switchFloor(newFloor.id);
-  render();
-  saveToStorage();
-  if (isAdminLoggedIn) renderFloorMapSelect();
+  const f = { id: uid++, name: `${n}-й этаж`, img: null, userPos: null, altMin: (n-1)*3, altMax: n*3, altEnabled: false };
+  floors.push(f);
+  switchFloor(f.id); render(); saveToStorage();
 }
 
 function deleteFloor(id) {
+  if (!isAdminLoggedIn) return;
   if (floors.length <= 1) { showToast('Нельзя удалить последний этаж'); return; }
   const idx = floors.findIndex(f => f.id === id);
   floors.splice(idx, 1);
-  if (activeId === id) activeId = floors[Math.max(0, idx - 1)].id;
-  render();
-  saveToStorage();
-  if (isAdminLoggedIn) renderFloorMapSelect();
+  if (activeId === id) activeId = floors[Math.max(0, idx-1)].id;
+  render(); saveToStorage();
 }
 
-// ── Inline rename ───────────────────────────────────────────
+// Inline rename (admin only)
 function startRename(id, displayEl) {
-  const f = getFloor(id);
-  if (!f) return;
+  if (!isAdminLoggedIn) return;
+  const f = getFloor(id); if (!f) return;
   const input = document.createElement('input');
-  input.className = 'fname-input';
-  input.value = f.name;
-  input.maxLength = 40;
-  displayEl.replaceWith(input);
-  input.focus(); input.select();
+  input.className = 'fname-input'; input.value = f.name; input.maxLength = 40;
+  displayEl.replaceWith(input); input.focus(); input.select();
   const commit = () => {
     f.name = input.value.trim() || f.name;
-    render();
-    if (activeId === id) badgeName.textContent = f.name;
-    saveToStorage();
-    if (isAdminLoggedIn) renderFloorMapSelect();
+    render(); if (activeId === id) badgeName.textContent = f.name; saveToStorage();
   };
   input.addEventListener('blur', commit);
   input.addEventListener('keydown', e => {
@@ -1696,10 +1451,9 @@ function startRename(id, displayEl) {
   input.addEventListener('click', e => e.stopPropagation());
 }
 
-// ── Context menu ────────────────────────────────────────────
+// Context menu
 function showCtxMenu(x, y, id) {
   ctxTargetId = id;
-  document.getElementById('ctxUpload').style.display = isAdminLoggedIn ? '' : 'none';
   ctxMenu.style.display = 'block';
   const mw = ctxMenu.offsetWidth, mh = ctxMenu.offsetHeight;
   ctxMenu.style.left = Math.min(x, window.innerWidth - mw - 8) + 'px';
@@ -1717,57 +1471,9 @@ document.getElementById('ctxUpload').onclick = () => { openPicker(); hideCtxMenu
 document.getElementById('ctxFit').onclick = () => { fitToScreen(); hideCtxMenu(); };
 document.getElementById('ctxDelete').onclick = () => { deleteFloor(ctxTargetId); hideCtxMenu(); };
 document.addEventListener('click', hideCtxMenu);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') hideCtxMenu(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { hideCtxMenu(); closeLogin(); closeSettings(); } });
 
-// ── File upload (только администратор) ──────────────────────
-function openPicker() {
-  if (!isAdminLoggedIn) {
-    showToast('🔒 Карты этажей загружает только администратор');
-    openAdmin();
-    return;
-  }
-  filePicker.value = '';
-  filePicker.click();
-}
-
-filePicker.onchange = e => {
-  const file = e.target.files[0];
-  if (file) loadImageFile(file);
-};
-
-function loadImageFile(file) {
-  if (!isAdminLoggedIn) {
-    showToast('🔒 Карты этажей загружает только администратор');
-    return;
-  }
-  if (!file.type.startsWith('image/')) { showToast('Пожалуйста, выберите изображение'); return; }
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const f = getFloor(activeId);
-    if (f) {
-      f.img = ev.target.result;
-      render();
-      fitToScreen();
-      saveToStorage();
-    }
-  };
-  reader.readAsDataURL(file);
-}
-
-['dragover','dragleave','drop'].forEach(type => {
-  uploadCard.addEventListener(type, e => {
-    e.preventDefault(); e.stopPropagation();
-    uploadCard.classList.toggle('dragover', type === 'dragover' && isAdminLoggedIn);
-    if (type === 'drop' && e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
-  });
-});
-mapWrap.addEventListener('dragover', e => e.preventDefault());
-mapWrap.addEventListener('drop', e => {
-  e.preventDefault();
-  if (e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
-});
-
-// ── RENDER ───────────────────────────────────────────────────
+// ── RENDER ─────────────────────────────────────────
 function render() {
   floorsList.innerHTML = '';
   for (let i = floors.length - 1; i >= 0; i--) {
@@ -1779,23 +1485,18 @@ function render() {
     const row = document.createElement('div');
     row.className = 'frow' + (isActive ? ' active' : '') + (isUserHere ? ' user-here' : '');
     row.dataset.id = f.id;
-
     row.innerHTML = `
       <div class="fnum">${floorNum}</div>
       <div class="finfo">
         <div class="fname-display" data-fid="${f.id}">${esc(f.name)}</div>
         <div class="fstatus ${f.img ? 'ok' : ''}">${f.img ? '● карта загружена' : '○ нет карты'}</div>
       </div>
-      <div class="fthumb">${f.img ? `<img src="${f.img}" alt="">` : ''}</div>
-    `;
-
+      <div class="fthumb">${f.img ? `<img src="${f.img}" alt="">` : ''}</div>`;
     row.addEventListener('click', () => { switchFloor(f.id); closeSidebar(); });
     row.addEventListener('dblclick', e => {
-      if (e.target.classList.contains('fname-display')) startRename(f.id, e.target);
+      if (isAdminLoggedIn && e.target.classList.contains('fname-display')) startRename(f.id, e.target);
     });
-    row.addEventListener('contextmenu', e => {
-      e.preventDefault(); showCtxMenu(e.clientX, e.clientY, f.id);
-    });
+    row.addEventListener('contextmenu', e => { e.preventDefault(); showCtxMenu(e.clientX, e.clientY, f.id); });
     floorsList.appendChild(row);
   }
   updateMapDisplay(false);
@@ -1811,27 +1512,30 @@ function updateMapDisplay(animate) {
       mapImg.style.display = 'block';
       uploadZone.classList.remove('active');
       uploadZone.style.display = 'none';
-      replaceBtn.style.display = isAdminLoggedIn ? 'block' : 'none';
       fitBtn.style.display = 'block';
+      // Admin map bar buttons
+      document.getElementById('adminReplaceBtn').style.display = isAdminLoggedIn ? '' : 'none';
+      document.getElementById('adminDeleteMapBtn').style.display = isAdminLoggedIn ? '' : 'none';
     } else {
       mapImg.style.display = 'none';
       userDot.style.display = 'none';
       uploadZone.style.display = 'flex';
-      replaceBtn.style.display = 'none';
       fitBtn.style.display = 'none';
-
+      document.getElementById('adminReplaceBtn').style.display = 'none';
+      document.getElementById('adminDeleteMapBtn').style.display = 'none';
+      // Upload zone interactivity
       if (isAdminLoggedIn) {
         uploadZone.classList.add('active');
-        uploadCard.style.cursor = 'pointer';
-        uploadIcon.textContent = '🗺️';
-        uploadTitle.textContent = 'Загрузить карту этажа';
-        uploadSub.innerHTML = 'Нажмите или перетащите изображение<br>PNG, JPG, SVG, WebP';
+        uploadCard.classList.remove('no-perms');
+        document.getElementById('uploadIcon').textContent = '📤';
+        document.getElementById('uploadTitle').textContent = 'Загрузить карту этажа';
+        document.getElementById('uploadSub').innerHTML = 'Нажмите или перетащите изображение<br>PNG, JPG, SVG, WebP';
       } else {
         uploadZone.classList.remove('active');
-        uploadCard.style.cursor = 'default';
-        uploadIcon.textContent = '🔒';
-        uploadTitle.textContent = 'Карта пока не загружена';
-        uploadSub.innerHTML = 'Карты этажей загружает<br>только администратор';
+        uploadCard.classList.add('no-perms');
+        document.getElementById('uploadIcon').textContent = '🔒';
+        document.getElementById('uploadTitle').textContent = 'Карта не загружена';
+        document.getElementById('uploadSub').innerHTML = 'Только администратор<br>может загружать карты этажей';
       }
     }
   };
@@ -1844,9 +1548,7 @@ function updateMapDisplay(animate) {
       canvas.style.opacity = '1';
       uploadZone.style.opacity = '1';
     }, 150);
-  } else {
-    show();
-  }
+  } else { show(); }
 }
 
 function esc(s) {
@@ -1856,8 +1558,7 @@ function esc(s) {
 // ── Transform / Pan / Zoom ──────────────────────────────────
 function applyTransform() {
   canvas.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
-  const gs = 20 * scale, g5 = 100 * scale;
-  const bp = `${tx}px ${ty}px`;
+  const gs = 20 * scale, g5 = 100 * scale, bp = `${tx}px ${ty}px`;
   gridBg.style.backgroundSize = `${g5}px ${g5}px, ${g5}px ${g5}px, ${gs}px ${gs}px, ${gs}px ${gs}px`;
   gridBg.style.backgroundPosition = `${bp}, ${bp}, ${bp}, ${bp}`;
   const pct = Math.round(scale * 100);
@@ -1874,9 +1575,7 @@ function doZoom(factor, mx, my) {
   if (my === undefined) my = rect.height / 2;
   const ns = Math.min(Math.max(scale * factor, 0.05), 20);
   const r = ns / scale;
-  tx = mx - r * (mx - tx);
-  ty = my - r * (my - ty);
-  scale = ns;
+  tx = mx - r * (mx - tx); ty = my - r * (my - ty); scale = ns;
   applyTransform();
 }
 
@@ -1884,180 +1583,117 @@ function resetView() { tx=0; ty=0; scale=1; applyTransform(); }
 
 function fitToScreen() {
   if (!mapImg.naturalWidth) return;
-  const rect = mapWrap.getBoundingClientRect();
-  const margin = 32;
+  const rect = mapWrap.getBoundingClientRect(), margin = 32;
   const sw = rect.width - margin*2, sh = rect.height - margin*2;
   const iw = mapImg.naturalWidth, ih = mapImg.naturalHeight;
   const s = Math.min(sw/iw, sh/ih, 1);
-  scale = s;
-  tx = (rect.width  - iw * s) / 2;
-  ty = (rect.height - ih * s) / 2;
+  scale = s; tx = (rect.width - iw*s)/2; ty = (rect.height - ih*s)/2;
   applyTransform();
 }
 
-// ── Mouse pan ───────────────────────────────────────────────
+// Mouse pan
 mapWrap.addEventListener('mousedown', e => {
   if (uploadZone.contains(e.target) && uploadZone.classList.contains('active')) return;
-  if (ctxMenu.contains(e.target)) return;
-  if (userDotDragging) return;
-  if (e.button !== 0) return;
-  dragging = true;
-  dx0 = e.clientX; dy0 = e.clientY; tx0 = tx; ty0 = ty;
-  mapWrap.classList.add('grabbing');
-  e.preventDefault();
+  if (ctxMenu.contains(e.target) || userDotDragging || e.button !== 0) return;
+  dragging = true; dx0 = e.clientX; dy0 = e.clientY; tx0 = tx; ty0 = ty;
+  mapWrap.classList.add('grabbing'); e.preventDefault();
 });
-
-document.addEventListener('mousemove', e => {
-  if (!dragging) return;
-  tx = tx0 + (e.clientX - dx0);
-  ty = ty0 + (e.clientY - dy0);
-  applyTransform();
-});
-
-document.addEventListener('mouseup', () => {
-  dragging = false;
-  mapWrap.classList.remove('grabbing');
-});
-
+document.addEventListener('mousemove', e => { if (!dragging) return; tx = tx0+(e.clientX-dx0); ty = ty0+(e.clientY-dy0); applyTransform(); });
+document.addEventListener('mouseup', () => { dragging = false; mapWrap.classList.remove('grabbing'); });
 mapWrap.addEventListener('wheel', e => {
   e.preventDefault();
   const rect = mapWrap.getBoundingClientRect();
-  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-  const factor = e.deltaY < 0 ? 1.1 : (1/1.1);
-  doZoom(factor, mx, my);
+  doZoom(e.deltaY < 0 ? 1.1 : 1/1.1, e.clientX-rect.left, e.clientY-rect.top);
 }, { passive: false });
 
-// ── Touch pan/zoom ───────────────────────────────────────────
+// Touch pan/zoom
 let touches = [], lastPinchDist = 0;
-
 mapWrap.addEventListener('touchstart', e => {
   if (userDotDragging) return;
   touches = Array.from(e.touches);
-  if (touches.length === 1) {
-    dx0 = touches[0].clientX; dy0 = touches[0].clientY;
-    tx0 = tx; ty0 = ty;
-  } else if (touches.length === 2) {
-    lastPinchDist = pinchDist(touches);
-  }
+  if (touches.length === 1) { dx0=touches[0].clientX; dy0=touches[0].clientY; tx0=tx; ty0=ty; }
+  else if (touches.length === 2) lastPinchDist = pinchDist(touches);
   e.preventDefault();
 }, { passive: false });
-
 mapWrap.addEventListener('touchmove', e => {
   if (userDotDragging) return;
   const t = Array.from(e.touches);
-  if (t.length === 1) {
-    tx = tx0 + (t[0].clientX - dx0);
-    ty = ty0 + (t[0].clientY - dy0);
-  } else if (t.length === 2) {
-    const d = pinchDist(t);
-    const m = pinchMid(t);
-    const rect = mapWrap.getBoundingClientRect();
-    const mx = m.x - rect.left, my = m.y - rect.top;
-    const ns = Math.min(Math.max(scale * (d / lastPinchDist), 0.05), 20);
-    const r = ns / scale;
-    tx = mx - r * (mx - tx);
-    ty = my - r * (my - ty);
-    scale = ns;
-    lastPinchDist = d;
+  if (t.length === 1) { tx=tx0+(t[0].clientX-dx0); ty=ty0+(t[0].clientY-dy0); }
+  else if (t.length === 2) {
+    const d = pinchDist(t), m = pinchMid(t), rect = mapWrap.getBoundingClientRect();
+    const mx = m.x-rect.left, my = m.y-rect.top;
+    const ns = Math.min(Math.max(scale*(d/lastPinchDist),0.05),20), r=ns/scale;
+    tx=mx-r*(mx-tx); ty=my-r*(my-ty); scale=ns; lastPinchDist=d;
   }
-  applyTransform();
-  e.preventDefault();
+  applyTransform(); e.preventDefault();
 }, { passive: false });
-
 mapWrap.addEventListener('touchend', e => { touches = Array.from(e.touches); });
+function pinchDist(t) { return Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY); }
+function pinchMid(t) { return { x:(t[0].clientX+t[1].clientX)/2, y:(t[0].clientY+t[1].clientY)/2 }; }
 
-function pinchDist(t) {
-  return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-}
-function pinchMid(t) {
-  return { x: (t[0].clientX + t[1].clientX)/2, y: (t[0].clientY + t[1].clientY)/2 };
-}
-
-// ── Keyboard shortcuts ──────────────────────────────────────
+// Keyboard
 document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return;
-  if (e.key === '=' || e.key === '+') doZoom(1.25);
-  if (e.key === '-') doZoom(0.8);
-  if (e.key === '0') resetView();
-  if (e.key === 'f' || e.key === 'а') fitToScreen();
-  if (e.key === 'ArrowLeft')  { tx += 40; applyTransform(); }
-  if (e.key === 'ArrowRight') { tx -= 40; applyTransform(); }
-  if (e.key === 'ArrowUp')    { ty += 40; applyTransform(); }
-  if (e.key === 'ArrowDown')  { ty -= 40; applyTransform(); }
-  if (e.key === 'PageUp') {
-    const idx = floors.findIndex(f => f.id === activeId);
-    if (idx < floors.length - 1) switchFloor(floors[idx + 1].id);
-  }
-  if (e.key === 'PageDown') {
-    const idx = floors.findIndex(f => f.id === activeId);
-    if (idx > 0) switchFloor(floors[idx - 1].id);
-  }
+  if (e.target.tagName==='INPUT') return;
+  if (e.key==='='||e.key==='+') doZoom(1.25);
+  if (e.key==='-') doZoom(0.8);
+  if (e.key==='0') resetView();
+  if (e.key==='f'||e.key==='а') fitToScreen();
+  if (e.key==='ArrowLeft') { tx+=40; applyTransform(); }
+  if (e.key==='ArrowRight') { tx-=40; applyTransform(); }
+  if (e.key==='ArrowUp') { ty+=40; applyTransform(); }
+  if (e.key==='ArrowDown') { ty-=40; applyTransform(); }
+  if (e.key==='PageUp') { const i=floors.findIndex(f=>f.id===activeId); if(i<floors.length-1) switchFloor(floors[i+1].id); }
+  if (e.key==='PageDown') { const i=floors.findIndex(f=>f.id===activeId); if(i>0) switchFloor(floors[i-1].id); }
 });
 
-// ── Mobile sidebar ──────────────────────────────────────────
-function toggleSidebar() {
-  sidebar.classList.toggle('open');
-  sidebarOverlay.classList.toggle('show');
-}
-function closeSidebar() {
-  if (window.innerWidth < 640) {
-    sidebar.classList.remove('open');
-    sidebarOverlay.classList.remove('show');
-  }
-}
+// Mobile sidebar
+function toggleSidebar() { sidebar.classList.toggle('open'); sidebarOverlay.classList.toggle('show'); }
+function closeSidebar() { if(window.innerWidth<640) { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('show'); } }
 
-// ── Toast ────────────────────────────────────────────────────
+// Toast
 function showToast(msg, type) {
   const t = document.createElement('div');
   t.textContent = msg;
   Object.assign(t.style, {
-    background: type === 'error' ? '#ef4444' : '#1e293b',
-    color: '#e2e8f0',
-    padding: '9px 18px',
-    borderRadius: '8px',
-    fontSize: '13px', fontWeight: '500',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-    pointerEvents: 'none',
-    transition: 'opacity 0.3s',
-    maxWidth: '90vw',
-    textAlign: 'center',
+    background: type==='error'?'#ef4444':type==='ok'?'#15803d':'#1e293b',
+    color:'#e2e8f0', padding:'9px 18px', borderRadius:'8px',
+    fontSize:'13px', fontWeight:'500', boxShadow:'0 4px 16px rgba(0,0,0,0.4)',
+    pointerEvents:'none', transition:'opacity 0.3s', maxWidth:'90vw', textAlign:'center',
   });
   document.getElementById('toastWrap').appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2800);
+  setTimeout(() => { t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 2800);
 }
 
-// ── mapImg fit on load ───────────────────────────────────────
 mapImg.addEventListener('load', () => {
-  if (scale === 1 && tx === 0 && ty === 0) fitToScreen();
+  if (scale===1 && tx===0 && ty===0) fitToScreen();
   if (gpsActive && insideGeofence) showUserOnMap();
 });
 
-// Building name save
 document.getElementById('buildingName').addEventListener('input', () => saveToStorage());
 
-// ── Simulate broadcast for other browser tabs (storage event) ──
 window.addEventListener('storage', e => {
-  if (e.key === 'floormap_data') {
+  if (e.key==='floormap_data') {
     try {
       const data = JSON.parse(e.newValue);
-      if (data.broadcastData) {
-        currentBroadcastData = data.broadcastData;
-        showBroadcastBanner();
-      } else {
-        currentBroadcastData = null;
-        document.getElementById('broadcastBanner').classList.remove('show');
-        closeBroadcast();
-      }
+      if (data.broadcastData) { currentBroadcastData=data.broadcastData; showBroadcastBanner(); }
+      else { currentBroadcastData=null; document.getElementById('broadcastBanner').classList.remove('show'); closeBroadcast(); }
     } catch(e) {}
   }
 });
 
-// ── INIT ─────────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────
 loadFromStorage();
+
+// Check cookie for admin session
+if (getCookie(ADMIN_SESSION_COOKIE) === 'active') {
+  isAdminLoggedIn = true;
+  document.body.classList.add('admin-mode');
+  document.getElementById('settingsBtn').style.display = '';
+}
+
 render();
 applyTransform();
 
-// Show hint on mobile
 if (window.innerWidth < 640) {
   setTimeout(() => showToast('☰ Нажмите кнопку меню для выбора этажа'), 800);
 }
